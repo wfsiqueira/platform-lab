@@ -259,6 +259,10 @@ watch kubectl get tigerastatus
 
 **Objetivo:** um salto de minor por passo, seguindo `docs/runbooks/upgrade-kubeadm.md` (seções 1 a 3).
 
+Antes de cada salto, confira também que não há arquivos extras na pasta de static pods: `ls /etc/kubernetes/manifests/` deve ter só os 4 YAMLs.
+
+Workers com o script: `~/upgrade-worker.sh <nó> <ip> <patch>` (rode como seu usuário, sem sudo).
+
 Antes de cada salto:
 
 ```bash
@@ -374,4 +378,7 @@ Pendente para a etapa 2: baseplus e Keycloak (HTTPRoutes no repositório da base
 | Drain travado | PDBs impossíveis (1 réplica) e volumes locais presos ao nó | Auditoria de PDB antes; `--disable-eviction` consciente | PDB, StatefulSet com volume local, janela de manutenção |
 | DNS apontando para um túnel "diferente" | `tunnelId` sobrando no values; o real vem do secret | Confirmei pelos logs do cloudflared e pelo painel | Investigar pela fonte da verdade, não pela config |
 | Mudar o values do túnel não mudaria nada | Túnel com configuração remota (painel) | Corte por host no painel; plano de levar para Terraform | Entender onde a configuração realmente vive |
+| `kubeadm upgrade apply` falhou: "static Pod hash … did not change" | Arquivos `*.yaml.bak` de maio/2025 dentro de `/etc/kubernetes/manifests/`; o kubelet sobe tudo que está na pasta, e havia dois kube-apiserver (e dois controller-manager/scheduler, que explicavam 22 restarts) | Movi os `.bak` para `/root`, o control plane estabilizou e o `apply` passou | Static pods, leitura de logs do kubelet, rollback do kubeadm (que voltou o apiserver mas não o etcd) |
+| Drain do nó com o Postgres primário estourou o tempo | O PDB permitia, mas o shutdown "smart" do CloudNativePG leva minutos | Switchover do primário antes do drain e `DRAIN_TIMEOUT=600s` | `terminationGracePeriodSeconds` também segura drain; operação de bancos em Kubernetes |
+| Velero "Completed" mas sem dados | Sem file system backup (Pod Volume Backups: none) e MinIO dentro do próprio cluster | Dump do Passbolt + Secrets (GPG/JWT) no Mac; snapshots das VMs | Backup que não foi testado não é backup |
 | Componentes vencidos (Istio 1.21, Calico 3.28, ingress-nginx) | Cluster sem ciclo de upgrade | Matriz de compatibilidade antes de cada salto | Gestão de dependências e upgrade seguro |
