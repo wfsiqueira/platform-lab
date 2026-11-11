@@ -1,2 +1,0 @@
-# OBSOLETO: o cluster tem MetalLB, então o Envoy usa LoadBalancer (00-envoyproxy.yaml).
-# Pode apagar este arquivo.

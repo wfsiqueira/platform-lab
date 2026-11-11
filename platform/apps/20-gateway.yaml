@@ -8,7 +8,7 @@ metadata:
 spec:
   project: default
   source:
-    repoURL: https://github.com/REPLACE_ME/platform-lab.git
+    repoURL: https://github.com/wfsiqueira/platform-lab.git
     targetRevision: main
     path: platform/gateway
   destination:
@@ -26,7 +26,7 @@ metadata:
 spec:
   project: default
   source:
-    repoURL: https://github.com/REPLACE_ME/platform-lab.git
+    repoURL: https://github.com/wfsiqueira/platform-lab.git
     targetRevision: main
     path: platform/demo
   destination:

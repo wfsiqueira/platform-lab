@@ -1,0 +1,15 @@
+# Instale com: brew install pre-commit gitleaks && pre-commit install
+# Rode no histórico inteiro: gitleaks git -v
+repos:
+  - repo: https://github.com/gitleaks/gitleaks
+    rev: v8.24.0   # confira a versão mais recente em github.com/gitleaks/gitleaks/releases
+    hooks:
+      - id: gitleaks
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v5.0.0
+    hooks:
+      - id: check-yaml
+        args: ["--allow-multiple-documents"]
+      - id: end-of-file-fixer
+      - id: trailing-whitespace
+      - id: detect-private-key

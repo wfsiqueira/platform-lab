@@ -1,0 +1,19 @@
+# credenciais e estado local
+*.kubeconfig
+kubeconfig*
+*.pem
+*.key
+*.crt
+.env
+*.env
+secrets/
+etcd-snapshot-*.db
+
+# coletas do cluster (topologia interna; não publicar)
+coleta*.txt
+preflight*.txt
+
+# editores e SO
+.DS_Store
+.idea/
+.vscode/
