@@ -43,6 +43,12 @@ A partir daí, toda mudança entra por Pull Request neste repositório.
 - [ADR-0001 — GitOps como única via de mudança](docs/adr/0001-gitops-como-unica-via-de-mudanca.md)
 - [ADR-0002 — Gateway API no lugar do ingress-nginx](docs/adr/0002-gateway-api-no-lugar-do-ingress-nginx.md)
 
+## Estudo
+
+- [Passo a passo da Etapa 1 (semanas 1 e 2)](docs/estudo/passo-a-passo-etapa-1.md)
+- [Roteiro de 12 semanas](docs/estudo/roteiro.md)
+- [Guia das semanas 1 e 2](docs/estudo/guia-semanas-01-02.md)
+
 ## Runbooks
 
 - [Identidade única nos nós clonados](docs/runbooks/reset-identidade-clones.md)
