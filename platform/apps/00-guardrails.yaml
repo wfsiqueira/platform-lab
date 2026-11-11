@@ -6,7 +6,7 @@ metadata:
   annotations:
     argocd.argoproj.io/sync-wave: "-10"   # antes de tudo
 spec:
-  project: default
+  project: platform-lab
   source:
     repoURL: https://github.com/wfsiqueira/platform-lab.git
     targetRevision: main

@@ -16,6 +16,8 @@ grep -q 'REPLACE_ME' "$DIR/root-app.yaml" && {
 # porque os values deste repo sobrescreveriam a configuração atual (domínio, TLS, SSO).
 if kubectl -n "$NS" get deploy argocd-server >/dev/null 2>&1 && [ "${UPGRADE_ARGOCD:-0}" != "1" ]; then
   echo "Argo CD existente detectado: mantendo como está e aplicando só a root app."
+  kubectl label namespace "$NS" gateway-access=true --overwrite
+  kubectl apply -f "$DIR/appproject-platform-lab.yaml"
   kubectl apply -f "$DIR/repo-envoy-oci.yaml"
   kubectl apply -f "$DIR/root-app.yaml"
   exit 0
@@ -31,6 +33,8 @@ if [ -n "$ARGO_CHART_VERSION" ]; then VERSION_FLAG="--version $ARGO_CHART_VERSIO
 helm upgrade --install argocd argo/argo-cd -n "$NS" --create-namespace \
   -f "$DIR/argocd/values.yaml" $VERSION_FLAG --wait
 
+kubectl label namespace "$NS" gateway-access=true --overwrite
+kubectl apply -f "$DIR/appproject-platform-lab.yaml"
 kubectl apply -f "$DIR/repo-envoy-oci.yaml"
 kubectl apply -f "$DIR/root-app.yaml"
 

@@ -1,0 +1,24 @@
+# AppProject do laboratório. Isola as apps do platform-lab das apps do baseplus
+# (projeto "baseplus") e do projeto "default".
+# - sourceRepos: só este repo e o chart OCI do Envoy Gateway.
+# - destinations: só os namespaces do lab. "argocd" entra porque a root app cria
+#   objetos Application ali. Ao publicar a rota do Passbolt, acrescente "application".
+# - clusterResourceWhitelist "*": o chart do Envoy Gateway cria CRDs, ClusterRoles e
+#   webhooks; o guardrails cria PriorityClasses. O isolamento fica nos namespaces.
+apiVersion: argoproj.io/v1alpha1
+kind: AppProject
+metadata:
+  name: platform-lab
+  namespace: argocd
+spec:
+  description: Laboratório de engenharia de plataforma (github.com/wfsiqueira/platform-lab)
+  sourceRepos:
+    - https://github.com/wfsiqueira/platform-lab.git
+    - docker.io/envoyproxy
+  destinations:
+    - { server: https://kubernetes.default.svc, namespace: argocd }
+    - { server: https://kubernetes.default.svc, namespace: envoy-gateway-system }
+    - { server: https://kubernetes.default.svc, namespace: gateway }
+    - { server: https://kubernetes.default.svc, namespace: "lab-*" }
+  clusterResourceWhitelist:
+    - { group: "*", kind: "*" }

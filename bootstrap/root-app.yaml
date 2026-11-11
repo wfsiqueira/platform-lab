@@ -2,10 +2,10 @@
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
-  name: root
+  name: platform-lab-root
   namespace: argocd
 spec:
-  project: default
+  project: platform-lab
   source:
     repoURL: https://github.com/wfsiqueira/platform-lab.git
     targetRevision: main

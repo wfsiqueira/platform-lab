@@ -36,11 +36,6 @@ spec:
         memory: 64Mi
       max:
         memory: 2Gi
----
-# O namespace do Argo CD é criado pelo Helm; aqui só garantimos o label que libera a rota no Gateway.
-apiVersion: v1
-kind: Namespace
-metadata:
-  name: argocd
-  labels:
-    gateway-access: "true"
+# O namespace "argocd" NÃO é gerido aqui: com prune ligado, um erro neste arquivo
+# apagaria o namespace inteiro (o Argo CD e as Applications do baseplus junto).
+# O label gateway-access=true é aplicado pelo bootstrap/install-argocd.sh.

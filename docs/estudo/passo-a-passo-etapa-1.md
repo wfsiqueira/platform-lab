@@ -297,7 +297,7 @@ kubectl get clusterpolicy 2>/dev/null       # Kyverno: alguma política barra Na
 kubectl -n argocd get applications
 ```
 
-**Validação:** `root`, `guardrails`, `envoy-gateway` com `Synced/Healthy`; PriorityClasses `homelab-critical` e `lab-default` criadas.
+**Validação:** `platform-lab-root`, `guardrails`, `envoy-gateway` com `Synced/Healthy`; PriorityClasses `homelab-critical` e `lab-default` criadas.
 
 Em seguida, com os CRDs da Gateway API já instalados:
 
@@ -306,7 +306,9 @@ helm upgrade external-dns <repo>/external-dns --version 1.17.0 -n cloudflare --r
   --set 'sources={ingress,gateway-httproute}'
 ```
 
-**Rollback:** `kubectl -n argocd delete application root` (as Applications filhas são removidas; os Helm releases antigos continuam).
+**Rollback:** `kubectl -n argocd delete application platform-lab-root guardrails envoy-gateway gateway demo` e depois `kubectl -n argocd delete appproject platform-lab`. As Applications não têm o finalizer `resources-finalizer.argocd.argoproj.io`, então apagá-las **não** apaga o que elas criaram; remova os recursos à mão se quiser limpar. As apps do baseplus (projeto `baseplus`) não são afetadas.
+
+**Isolamento:** as apps do lab usam o AppProject `platform-lab` (`bootstrap/appproject-platform-lab.yaml`), que só aceita este repo e os namespaces `argocd`, `envoy-gateway-system`, `gateway` e `lab-*`. O namespace `argocd` não é gerido pelo guardrails: com prune ligado, um erro ali apagaria o Argo CD e as Applications do baseplus.
 
 **CKA:** exercícios 8, 9 e 10 (Helm, Kustomize, CRDs).
 
