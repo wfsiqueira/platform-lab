@@ -1,0 +1,20 @@
+# Protege o que já está em produção no homelab de ser despejado pelo laboratório.
+# Depois do sync, adicione `priorityClassName: homelab-critical` aos Deployments do
+# Home Assistant e do Passbolt (no repo deles, não aqui).
+apiVersion: scheduling.k8s.io/v1
+kind: PriorityClass
+metadata:
+  name: homelab-critical
+value: 100000
+globalDefault: false
+preemptionPolicy: PreemptLowerPriority
+description: "Serviços pessoais do homelab (Home Assistant, Passbolt, Postfix)."
+---
+apiVersion: scheduling.k8s.io/v1
+kind: PriorityClass
+metadata:
+  name: lab-default
+value: 1000
+globalDefault: false
+preemptionPolicy: Never
+description: "Componentes do platform-lab: cedem lugar se faltar recurso."

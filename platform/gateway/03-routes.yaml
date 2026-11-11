@@ -1,0 +1,37 @@
+# Rotas dos hosts de PLATAFORMA (argocd, passbolt). Ficam COMENTADAS até o dia do corte.
+# As rotas da baseplus NÃO ficam aqui: os Ingress dela são gerenciados pelas apps do Argo CD
+# "baseplus-hml" e "baseplus-platform-hml", no repositório da própria aplicação. Os HTTPRoutes
+# vão para lá (exemplo em docs/exemplos/baseplus-httproutes.yaml). É a separação de papéis
+# da Gateway API: a plataforma cuida do Gateway, cada aplicação cuida das suas rotas.
+#
+# Para cada namespace que vai ter rota:  kubectl label ns <ns> gateway-access=true
+#
+# --- argocd.wsiqueira.cloud ------------------------------------------------
+# Hoje: nginx -> argocd-server:443 (backend-protocol HTTPS). Envoy fala HTTP, então o
+# Argo CD precisa de server.insecure=true. Ativar isso QUEBRA o caminho do nginx,
+# portanto a troca do parâmetro e a do túnel são feitas juntas (runbook de migração).
+#
+# apiVersion: gateway.networking.k8s.io/v1
+# kind: HTTPRoute
+# metadata: { name: argocd, namespace: argocd }
+# spec:
+#   parentRefs: [{ name: homelab, namespace: gateway, sectionName: http }]
+#   hostnames: ["argocd.wsiqueira.cloud"]
+#   rules:
+#     - backendRefs: [{ name: argocd-server, port: 80 }]
+#
+# --- passbolt.wsiqueira.cloud (OPCIONAL) ------------------------------------
+# Hoje o túnel vai DIRETO em https://passbolt.application:443, sem nginx. Migrar é opcional.
+# Se quiser passar pelo Envoy, teste antes qual porta serve:
+#   kubectl run t --rm -it --image=curlimages/curl -- curl -sI http://passbolt.application.svc/
+# Se responder 200: use a porta 80 (abaixo). Se responder 301/302 para https: use o Plano B
+# do runbook (backend TLS sem verificação).
+#
+# apiVersion: gateway.networking.k8s.io/v1
+# kind: HTTPRoute
+# metadata: { name: passbolt, namespace: application }
+# spec:
+#   parentRefs: [{ name: homelab, namespace: gateway, sectionName: http }]
+#   hostnames: ["passbolt.wsiqueira.cloud"]
+#   rules:
+#     - backendRefs: [{ name: passbolt, port: 80 }]

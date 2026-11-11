@@ -1,0 +1,42 @@
+# EXEMPLO para o repositório da baseplus (não é sincronizado por este repo).
+# Substitui os Ingress baseplus, baseplus-ws e keycloak, mantendo o mesmo comportamento:
+#   /api/ws (Exact)  -> baseplus-api:80, com timeout de 3600 s (era proxy-read/send-timeout)
+#   /api   (Prefix)  -> baseplus-api:80
+#   /      (Prefix)  -> baseplus-frontend:80
+#   auth-baseplus-hml -> keycloak-service:8080
+# Na Gateway API, a regra mais específica vence (Exact > Prefix mais longo), então a ordem
+# abaixo é só para leitura.
+# Pré-requisito: kubectl label ns baseplus-hml gateway-access=true
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: baseplus
+  namespace: baseplus-hml
+spec:
+  parentRefs:
+    - { name: homelab, namespace: gateway, sectionName: http }
+  hostnames: ["baseplus-hml.wsiqueira.cloud"]
+  rules:
+    - matches: [{ path: { type: Exact, value: /api/ws } }]
+      timeouts: { request: 3600s }     # WebSocket de longa duração
+      backendRefs: [{ name: baseplus-api, port: 80 }]
+    - matches: [{ path: { type: PathPrefix, value: /api } }]
+      backendRefs: [{ name: baseplus-api, port: 80 }]
+    - matches: [{ path: { type: PathPrefix, value: / } }]
+      backendRefs: [{ name: baseplus-frontend, port: 80 }]
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: keycloak
+  namespace: baseplus-hml
+spec:
+  parentRefs:
+    - { name: homelab, namespace: gateway, sectionName: http }
+  hostnames: ["auth-baseplus-hml.wsiqueira.cloud"]
+  rules:
+    - backendRefs: [{ name: keycloak-service, port: 8080 }]
+# Keycloak: o Ingress tinha proxy-buffer-size=128k (cookies/headers grandes do login).
+# O limite padrão de headers do Envoy costuma bastar [Provável]; se o login falhar com 431
+# ou 502, aumente com uma ClientTrafficPolicy (headers) no Gateway.
+# Confira também no CR do Keycloak: spec.proxy.headers = xforwarded e spec.hostname correto.

@@ -1,0 +1,38 @@
+# O tráfego externo chega pelo Cloudflare Tunnel (release Helm "cloudflare"), não por
+# encaminhamento de porta. Por isso o Envoy fica como ClusterIP, e criamos um Service
+# com nome FIXO para apontar o túnel: o Service gerado pelo Envoy Gateway tem nome com hash.
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: EnvoyProxy
+metadata:
+  name: homelab
+  namespace: envoy-gateway-system
+spec:
+  provider:
+    type: Kubernetes
+    kubernetes:
+      envoyDeployment:
+        replicas: 2
+        container:
+          resources:
+            requests: { cpu: 50m, memory: 64Mi }
+            limits: { memory: 256Mi }
+      envoyService:
+        type: ClusterIP
+---
+# Destino do cloudflared: http://envoy-homelab.envoy-gateway-system.svc.cluster.local:80
+# Confira os labels reais dos pods antes do 1º uso:
+#   kubectl -n envoy-gateway-system get pods --show-labels | grep homelab
+apiVersion: v1
+kind: Service
+metadata:
+  name: envoy-homelab
+  namespace: envoy-gateway-system
+spec:
+  type: ClusterIP
+  selector:
+    gateway.envoyproxy.io/owning-gateway-name: homelab
+    gateway.envoyproxy.io/owning-gateway-namespace: gateway
+  ports:
+    - name: http
+      port: 80
+      targetPort: 10080   # porta interna do Envoy para o listener 80; confirme com: kubectl -n envoy-gateway-system get svc -o wide

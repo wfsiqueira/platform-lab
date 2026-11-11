@@ -1,0 +1,28 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: envoy-gateway
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "-5"   # instala os CRDs da Gateway API antes do cert-manager
+spec:
+  project: default
+  source:
+    repoURL: docker.io/envoyproxy      # registrado como OCI em bootstrap/repo-envoy-oci.yaml
+    chart: gateway-helm
+    targetRevision: "v1.8.*"           # confira a versão estável em gateway.envoyproxy.io e fixe
+    helm:
+      valuesObject:
+        deployment:
+          envoyGateway:
+            resources:
+              requests: { cpu: 50m, memory: 128Mi }
+              limits: { memory: 512Mi }
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: envoy-gateway-system
+  syncPolicy:
+    automated: { prune: true, selfHeal: true }
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true   # CRDs grandes demais para o apply client-side

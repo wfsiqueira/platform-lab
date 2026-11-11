@@ -1,0 +1,49 @@
+# App de teste: valida túnel → Envoy e MOSTRA OS HEADERS recebidos pelo backend.
+# O ponto principal é o X-Forwarded-Proto: se chegar "https", os backends podem receber
+# HTTP do Envoy sem loop de redirect (Argo CD, Passbolt, Keycloak). Se chegar "http",
+# ver a seção "Plano B" no runbook de migração.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: echo
+  namespace: lab-demo
+spec:
+  replicas: 2
+  selector:
+    matchLabels: { app: echo }
+  template:
+    metadata:
+      labels: { app: echo }
+    spec:
+      priorityClassName: lab-default
+      containers:
+        - name: echo
+          image: registry.k8s.io/echoserver:1.10   # imprime método, URL e todos os headers
+          ports: [{ containerPort: 8080 }]
+          resources:
+            requests: { cpu: 10m, memory: 32Mi }
+            limits: { memory: 64Mi }
+          readinessProbe:
+            httpGet: { path: /, port: 8080 }
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: echo
+  namespace: lab-demo
+spec:
+  selector: { app: echo }
+  ports: [{ port: 80, targetPort: 8080 }]
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: echo
+  namespace: lab-demo
+spec:
+  parentRefs:
+    - { name: homelab, namespace: gateway, sectionName: http }
+  hostnames: ["demo.wsiqueira.cloud"]
+  rules:
+    - backendRefs:
+        - { name: echo, port: 80 }

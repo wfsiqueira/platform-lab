@@ -1,0 +1,3 @@
+# OBSOLETO: o TLS público termina na Cloudflare (túnel) e o cluster já tem cert-manager
+# instalado via Helm. Emissão de certificado no Gateway volta só se surgir acesso HTTPS
+# direto pela LAN. Pode apagar este arquivo.

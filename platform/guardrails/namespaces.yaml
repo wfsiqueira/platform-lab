@@ -1,0 +1,46 @@
+# Namespaces do laboratório com teto de recursos. Ajuste os números depois do preflight.
+# Total reservado para o lab: ~6 vCPU e ~16 GiB de limite, deixando folga para o homelab.
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: lab-demo
+  labels:
+    platform-lab/tier: lab
+    gateway-access: "true"
+---
+apiVersion: v1
+kind: ResourceQuota
+metadata:
+  name: lab-quota
+  namespace: lab-demo
+spec:
+  hard:
+    requests.cpu: "1"
+    requests.memory: 1Gi
+    limits.memory: 2Gi
+    pods: "20"
+    persistentvolumeclaims: "4"
+---
+apiVersion: v1
+kind: LimitRange
+metadata:
+  name: lab-defaults
+  namespace: lab-demo
+spec:
+  limits:
+    - type: Container
+      default:          # limite aplicado quando o container não declara
+        memory: 256Mi
+      defaultRequest:   # request aplicado quando o container não declara
+        cpu: 25m
+        memory: 64Mi
+      max:
+        memory: 2Gi
+---
+# O namespace do Argo CD é criado pelo Helm; aqui só garantimos o label que libera a rota no Gateway.
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: argocd
+  labels:
+    gateway-access: "true"

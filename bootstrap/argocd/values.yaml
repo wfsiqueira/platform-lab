@@ -1,0 +1,34 @@
+# Valores enxutos para nós de 7,4 GiB. Sem HA: é um laboratório.
+global:
+  domain: argocd.wsiqueira.cloud
+
+configs:
+  params:
+    server.insecure: true   # TLS termina no Envoy Gateway (Fase 0, dia 9)
+  cm:
+    timeout.reconciliation: 180s
+
+controller:
+  resources:
+    requests: { cpu: 100m, memory: 256Mi }
+    limits:   { memory: 1Gi }
+server:
+  resources:
+    requests: { cpu: 50m, memory: 128Mi }
+    limits:   { memory: 512Mi }
+repoServer:
+  resources:
+    requests: { cpu: 50m, memory: 128Mi }
+    limits:   { memory: 512Mi }
+redis:
+  resources:
+    requests: { cpu: 20m, memory: 64Mi }
+    limits:   { memory: 256Mi }
+applicationSet:
+  resources:
+    requests: { cpu: 20m, memory: 64Mi }
+    limits:   { memory: 256Mi }
+dex:
+  enabled: false        # SSO com GitHub entra na Fase 4 (Backstage)
+notifications:
+  enabled: false

@@ -1,0 +1,44 @@
+apiVersion: gateway.networking.k8s.io/v1
+kind: GatewayClass
+metadata:
+  name: envoy
+spec:
+  controllerName: gateway.envoyproxy.io/gatewayclass-controller
+  parametersRef:
+    group: gateway.envoyproxy.io
+    kind: EnvoyProxy
+    name: homelab
+    namespace: envoy-gateway-system
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: gateway
+  labels: { gateway-access: "true" }
+---
+# TLS público termina na borda da Cloudflare; o cloudflared fala HTTP com o Envoy
+# dentro do cluster. Por isso há um único listener HTTP. Rotas só de namespaces com
+# o label gateway-access=true.
+apiVersion: gateway.networking.k8s.io/v1
+kind: Gateway
+metadata:
+  name: homelab
+  namespace: gateway
+  annotations:
+    # O external-dns (source gateway-httproute) cria um CNAME por hostname de HTTPRoute
+    # apontando para o túnel, como já faz hoje pelas anotações dos Ingress.
+    # Túnel confirmado em 11/11/2026: kubernetes-tunnel-cloudflare (616ad2e0…), rodando no cluster.
+    external-dns.alpha.kubernetes.io/target: 616ad2e0-afe4-4302-9101-a8c0c8aa797f.cfargotunnel.com
+    external-dns.alpha.kubernetes.io/cloudflare-proxied: "true"
+spec:
+  gatewayClassName: envoy
+  listeners:
+    - name: http
+      protocol: HTTP
+      port: 80
+      hostname: "*.wsiqueira.cloud"
+      allowedRoutes:
+        namespaces:
+          from: Selector
+          selector:
+            matchLabels: { gateway-access: "true" }

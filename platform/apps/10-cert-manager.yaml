@@ -1,0 +1,3 @@
+# OBSOLETO: o cluster já tem cert-manager v1.18.0 instalado via Helm (release "cert-manager").
+# Não instale outro por cima. A adoção pelo Argo CD fica para depois da Fase 0.
+# Pode apagar este arquivo.

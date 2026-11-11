@@ -1,0 +1,17 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: guardrails
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "-10"   # antes de tudo
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/REPLACE_ME/platform-lab.git
+    targetRevision: main
+    path: platform/guardrails
+  destination:
+    server: https://kubernetes.default.svc
+  syncPolicy:
+    automated: { prune: true, selfHeal: true }

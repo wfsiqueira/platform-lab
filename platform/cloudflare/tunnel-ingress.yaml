@@ -1,0 +1,18 @@
+# Values do release Helm "cloudflare" (cloudflare-tunnel 0.3.2).
+#
+# IMPORTANTE (confirmado em 11/11/2026): o túnel kubernetes-tunnel-cloudflare (616ad2e0…) é
+# gerenciado REMOTAMENTE pelo painel da Cloudflare. Ao subir, o cloudflared loga
+# "Updated to new configuration … version=6" e passa a usar as rotas do painel. A seção
+# cloudflare.ingress do values (e o ConfigMap gerado a partir dela) é ignorada.
+#
+# Por isso este arquivo só controla as réplicas. As rotas ficam documentadas em
+# docs/cloudflare-tunnel-rotas.md e são alteradas no painel
+# (Zero Trust → Networks → Tunnels → kubernetes-tunnel-cloudflare → Routes).
+#
+# Aplicar:
+#   helm repo list   # nome do repo do chart
+#   helm upgrade cloudflare <repo>/cloudflare-tunnel --version 0.3.2 -n cloudflare \
+#     --reuse-values -f platform/cloudflare/tunnel-ingress.yaml
+
+replicaCount: 2   # o values diz 1, mas há 2 réplicas rodando (worker04 e worker06). Fixar 2 evita
+                  # que o próximo helm upgrade reduza para 1 e deixe todos os sites num pod só.
