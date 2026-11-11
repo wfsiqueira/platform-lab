@@ -43,27 +43,42 @@ kubectl delete ns istio-system istio-ingress   # istio-ingress só se estiver va
 
 ## 2. Calico (instalação via operator, namespace `calico-system`)
 
-Confirme o método de instalação e a versão alvo:
+**Estado em 11/11/2026:** variant `Calico`, operator `v1.34.3` (Calico 3.28.x), VXLANCrossSubnet, BGP ativo, dataplane iptables, com `calico-apiserver` (CRDs no modo aggregation API).
+
+**Matriz consultada na documentação oficial:**
+
+| Calico | Kubernetes testado |
+| --- | --- |
+| 3.28 | 1.27 a 1.30 |
+| 3.30 | 1.31 a 1.35 |
+| 3.32 | 1.34 a 1.36 |
+| 3.33 (latest) | 1.35 a 1.37 |
+
+O guia de upgrade cobre a partir das **duas versões anteriores**. Caminho: **3.28 → 3.30.7 → 3.32.3**. A 3.32 cobre todo o caminho do Kubernetes até 1.36. A 3.33 fica para depois, se o cluster for para 1.37.
+
+### Salto A: 3.28 → 3.30.7
 
 ```bash
-kubectl get installation default -o jsonpath='{.spec.variant}{"\n"}'     # Calico = instalado pelo tigera-operator
-kubectl -n tigera-operator get deploy tigera-operator -o jsonpath='{.spec.template.spec.containers[0].image}{"\n"}'
-helm list -A | grep -i -E 'calico|tigera' || echo "não é Helm: instalado por manifesto"
+mkdir -p ~/calico-upgrade && cd ~/calico-upgrade
+curl -fsSLO https://raw.githubusercontent.com/projectcalico/calico/v3.30.7/manifests/operator-crds.yaml
+curl -fsSLO https://raw.githubusercontent.com/projectcalico/calico/v3.30.7/manifests/tigera-operator.yaml
+kubectl apply --server-side --force-conflicts -f operator-crds.yaml
+kubectl apply --server-side --force-conflicts -f tigera-operator.yaml
 ```
 
-Escolha a versão alvo na página de requisitos: a mais recente que liste **1.33 a 1.36** entre as versões testadas (no início de nov/2026 a doc mostra a 3.32 como *latest*).
+### Salto B: 3.30.7 → 3.32.3 (só depois do teste de rede do salto A)
 
-Leia antes: [Upgrade Calico on Kubernetes (operator)](https://docs.tigera.io/calico/latest/operations/upgrading/kubernetes-upgrade). [Provável] O operator aceita pular minors, mas confira na doc da versão alvo se há passo intermediário obrigatório a partir da 3.28.
-
-Upgrade por manifesto (troque a versão):
+A partir da 3.32 o manifesto de CRDs muda de nome. Este cluster usa o API server do Calico (aggregation API), então o arquivo é `v1_crd_projectcalico_org.yaml`.
 
 ```bash
-CALICO=v3.32.0   # ajuste
-kubectl apply --server-side --force-conflicts \
-  -f "https://raw.githubusercontent.com/projectcalico/calico/${CALICO}/manifests/operator-crds.yaml"   # se existir nessa versão
-kubectl apply --server-side --force-conflicts \
-  -f "https://raw.githubusercontent.com/projectcalico/calico/${CALICO}/manifests/tigera-operator.yaml"
+cd ~/calico-upgrade
+curl -fsSLO https://raw.githubusercontent.com/projectcalico/calico/v3.32.3/manifests/v1_crd_projectcalico_org.yaml
+curl -fsSLO https://raw.githubusercontent.com/projectcalico/calico/v3.32.3/manifests/tigera-operator.yaml
+kubectl apply --server-side --force-conflicts -f v1_crd_projectcalico_org.yaml
+kubectl apply --server-side --force-conflicts -f tigera-operator.yaml
 ```
+
+Fontes: [requisitos 3.32](https://docs.tigera.io/calico/3.32/getting-started/kubernetes/requirements) · [upgrade 3.32](https://docs.tigera.io/calico/3.32/operations/upgrading/kubernetes-upgrade) · [requisitos 3.30](https://docs.tigera.io/calico/3.30/getting-started/kubernetes/requirements) · [upgrade 3.30](https://docs.tigera.io/calico/3.30/operations/upgrading/kubernetes-upgrade)
 
 Acompanhe:
 
