@@ -13,5 +13,6 @@ spec:
     path: platform/guardrails
   destination:
     server: https://kubernetes.default.svc
+    namespace: lab-demo
   syncPolicy:
     automated: { prune: true, selfHeal: true }

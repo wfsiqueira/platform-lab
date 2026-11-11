@@ -13,6 +13,7 @@ spec:
     path: platform/gateway
   destination:
     server: https://kubernetes.default.svc
+    namespace: gateway
   syncPolicy:
     automated: { prune: true, selfHeal: true }
 ---
@@ -31,5 +32,6 @@ spec:
     path: platform/demo
   destination:
     server: https://kubernetes.default.svc
+    namespace: lab-demo
   syncPolicy:
     automated: { prune: true, selfHeal: true }
