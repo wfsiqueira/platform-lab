@@ -1,0 +1,18 @@
+# Confia em 1 salto antes do Envoy: o cloudflared, que termina o TLS na borda da
+# Cloudflare e repassa X-Forwarded-For (IP real do cliente) e X-Forwarded-Proto: https.
+# Sem isto o Envoy trata toda requisição como "de borda" e reescreve
+# X-Forwarded-Proto para http, e Argo CD/Keycloak geram redirects para http://.
+# Efeito colateral aceito: um pod dentro do cluster também consegue forjar esses headers.
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: ClientTrafficPolicy
+metadata:
+  name: trust-cloudflared
+  namespace: gateway
+spec:
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      name: homelab
+  clientIPDetection:
+    xForwardedFor:
+      numTrustedHops: 1
