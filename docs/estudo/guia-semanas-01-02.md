@@ -47,7 +47,7 @@
 
 | Dia | Laboratório (1 h) | CKA (1 h) | Entregável |
 | --- | --- | --- | --- |
-| 1 | `git init`, `pre-commit install`, 1º commit. Salvar a saída do preflight em `docs/`. Conferir workers 03–06 com o loop do runbook de clones. | Arquitetura do control plane: static pods em `/etc/kubernetes/manifests`, kubelet, `crictl ps` no master. Exercício 2. | Repo no GitHub |
+| 1 | `pre-commit install` e `pre-commit run --all-files`. Guardar a saída do preflight só localmente (está no `.gitignore`). Conferir workers 03–06 com o loop do runbook de clones. | Arquitetura do control plane: static pods em `/etc/kubernetes/manifests`, kubelet, `crictl ps` no master. Exercício 2. | Repo no GitHub |
 | 2 | `scripts/etcd-backup.sh` no master + cópia para o Mac. `velero backup create pre-upgrade-…`. Snapshots das 7 VMs no vCenter. Fixar **`replicaCount: 2`** do cloudflared no values e **external-dns em `upsert-only`** (runbook de migração), antes de qualquer drain. | etcd: `snapshot save`, `status`, `restore` (runbook do etcd). Exercício 1. | Três camadas de backup |
 | 3 | **2 h no cluster:** identidade única (master, worker01, 02 e os que o loop apontar) e containerd 2.x no worker03, aproveitando o mesmo drain. | (drain/uncordon é treino) Exercício 4. | Nós únicos; containerd alinhado |
 | 4 | **2 h no cluster:** remover o Istio (uso já descartado; conferir `istio-ingress`) e Calico 3.28 → versão atual, com o teste de rede do runbook. | (troubleshooting de rede é treino) | Bloqueios resolvidos |
