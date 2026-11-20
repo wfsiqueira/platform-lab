@@ -1,6 +1,6 @@
 # ADR-0002 — Gateway API (Envoy Gateway) no lugar do ingress-nginx
 
-- **Status:** proposto (vira "aceito" quando o último host for migrado)
+- **Status:** aceito. 4 hosts migrados em 20/11/2026 (Argo CD, demo, baseplus, Keycloak); o Passbolt ficou fora (ADR-0003). Falta só a retirada do ingress-nginx (`docs/runbooks/retirada-ingress-nginx.md`).
 - **Data:** 2026-11
 
 ## Contexto

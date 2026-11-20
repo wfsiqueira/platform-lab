@@ -14,27 +14,19 @@ O túnel é gerenciado pelo **painel da Cloudflare** (configuração remota). Es
 
 O **Passbolt não passa pelo ingress-nginx**: o túnel fala direto com o Service dele. O Ingress `passbolt-ingress` não recebe tráfego externo; hoje ele só serve para o external-dns manter o registro DNS do Passbolt.
 
-## Estado em 20/11/2026
+## Estado em 20/11/2026 (após a migração)
 
 | Ordem | Hostname | Destino (service) | Observação |
 | --- | --- | --- | --- |
-| 1 | `passbolt.wsiqueira.cloud` | `https://passbolt.application.svc.cluster.local:443` | `noTLSVerify`; sem mudança |
-| 2 | `baseplus-hml.wsiqueira.cloud` | `https://ingress-nginx-controller.kube-system.svc.cluster.local:443` | ainda no nginx |
-| 3 | `auth-baseplus-hml.wsiqueira.cloud` | `https://ingress-nginx-controller.kube-system.svc.cluster.local:443` | ainda no nginx |
-| 4 | `argocd.wsiqueira.cloud` | `http://envoy-homelab.envoy-gateway-system.svc.cluster.local:80` | **migrado** (sem `originServerName` nem `noTLSVerify`) |
+| 1 | `passbolt.wsiqueira.cloud` | `https://passbolt.application.svc.cluster.local:443` | `noTLSVerify`; **fora do Envoy** (ADR-0003) |
+| 2 | `baseplus-hml.wsiqueira.cloud` | `http://envoy-homelab.envoy-gateway-system.svc.cluster.local:80` | migrado; sem `originServerName` nem `noTLSVerify` |
+| 3 | `auth-baseplus-hml.wsiqueira.cloud` | `http://envoy-homelab.envoy-gateway-system.svc.cluster.local:80` | migrado |
+| 4 | `argocd.wsiqueira.cloud` | `http://envoy-homelab.envoy-gateway-system.svc.cluster.local:80` | migrado |
 | 5 | `demo.wsiqueira.cloud` | `http://envoy-homelab.envoy-gateway-system.svc.cluster.local:80` | novo |
 
-## Destino após a migração
+Rollback de um host: voltar o destino para `https://ingress-nginx-controller.kube-system.svc.cluster.local:443` com `noTLSVerify` e `originServerName` do próprio host (enquanto o ingress-nginx existir; depois, ver `docs/runbooks/retirada-ingress-nginx.md`).
 
-| Hostname | Destino |
-| --- | --- |
-| `demo.wsiqueira.cloud` (novo) | `http://envoy-homelab.envoy-gateway-system.svc.cluster.local:80` |
-| `argocd.wsiqueira.cloud` | `http://envoy-homelab.envoy-gateway-system.svc.cluster.local:80` |
-| `baseplus-hml.wsiqueira.cloud` | `http://envoy-homelab.envoy-gateway-system.svc.cluster.local:80` |
-| `auth-baseplus-hml.wsiqueira.cloud` | `http://envoy-homelab.envoy-gateway-system.svc.cluster.local:80` |
-| `passbolt.wsiqueira.cloud` | sem mudança (direto no Service); passar pelo Envoy é opcional |
-
-Ao migrar um host, remova também o `originServerName`, que só existia por causa do SNI do nginx.
+O **Passbolt** não passa pelo Envoy: o certificado interno é autoassinado e regenerado a cada subida do pod, e a porta 80 redireciona para HTTPS. Detalhes e condição para reabrir em `docs/adr/0003-passbolt-fora-do-envoy-gateway.md`.
 
 ## Próximo passo: rotas como código
 

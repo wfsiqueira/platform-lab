@@ -42,6 +42,7 @@ A partir daí, toda mudança entra por Pull Request neste repositório.
 
 - [ADR-0001 — GitOps como única via de mudança](docs/adr/0001-gitops-como-unica-via-de-mudanca.md)
 - [ADR-0002 — Gateway API no lugar do ingress-nginx](docs/adr/0002-gateway-api-no-lugar-do-ingress-nginx.md)
+- [ADR-0003 — Passbolt fica fora do Envoy Gateway](docs/adr/0003-passbolt-fora-do-envoy-gateway.md)
 
 ## Estudo
 

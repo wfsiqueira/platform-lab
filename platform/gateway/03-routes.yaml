@@ -25,18 +25,7 @@ spec:
   rules:
     - backendRefs: [{ name: argocd-server, port: 80 }]
 #
-# --- passbolt.wsiqueira.cloud (OPCIONAL) ------------------------------------
-# Hoje o túnel vai DIRETO em https://passbolt.application:443, sem nginx. Migrar é opcional.
-# Se quiser passar pelo Envoy, teste antes qual porta serve:
-#   kubectl run t --rm -it --image=curlimages/curl -- curl -sI http://passbolt.application.svc/
-# Se responder 200: use a porta 80 (abaixo). Se responder 301/302 para https: use o Plano B
-# do runbook (backend TLS sem verificação).
-#
-# apiVersion: gateway.networking.k8s.io/v1
-# kind: HTTPRoute
-# metadata: { name: passbolt, namespace: application }
-# spec:
-#   parentRefs: [{ name: homelab, namespace: gateway, sectionName: http }]
-#   hostnames: ["passbolt.wsiqueira.cloud"]
-#   rules:
-#     - backendRefs: [{ name: passbolt, port: 80 }]
+# --- passbolt.wsiqueira.cloud ------------------------------------------------
+# FORA do Envoy (docs/adr/0003-passbolt-fora-do-envoy-gateway.md): o túnel vai direto em
+# https://passbolt.application:443. A porta 80 redireciona para HTTPS e o certificado interno é
+# autoassinado e regenerado a cada subida do pod, então não há como validá-lo no Envoy.

@@ -1,5 +1,7 @@
 # Runbook — Migração dos 5 Ingress para Gateway API pelo Cloudflare Tunnel
 
+> **Concluído em 20/11/2026:** argocd, demo, baseplus-hml e auth-baseplus-hml estão no Envoy Gateway. O Passbolt ficou fora (ADR-0003). Próximo: `docs/runbooks/retirada-ingress-nginx.md`. O restante deste documento é o registro do planejamento original.
+
 ## Como o tráfego chega hoje (confirmado em 11/11/2026)
 
 ```
