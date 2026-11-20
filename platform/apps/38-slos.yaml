@@ -1,0 +1,20 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: slos
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "27"
+spec:
+  project: platform-lab
+  source:
+    repoURL: https://github.com/wfsiqueira/platform-lab.git
+    targetRevision: main
+    path: platform/observability/slos
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: lab-observability
+  syncPolicy:
+    automated: { prune: true, selfHeal: true }
+    syncOptions: [SkipDryRunOnMissingResource=true]
+    retry: { limit: 5, backoff: { duration: 30s, factor: 2, maxDuration: 5m } }

@@ -1,0 +1,41 @@
+# Dois SLOs do pipeline de demonstração. As fontes são as span metrics do Tempo (metrics-generator).
+# A API injeta ~2% de erros: com objetivo de 99,5% ela queima o orçamento ~4x e dispara o alerta de ticket.
+# Para ver o alerta de página (burn 14,4x), suba FAIL_RATE da API para 0.10.
+apiVersion: sloth.slok.dev/v1
+kind: PrometheusServiceLevel
+metadata:
+  name: demo-pipeline
+  namespace: lab-observability
+spec:
+  service: demo-pipeline
+  labels:
+    team: lab
+  slos:
+    - name: api-availability
+      objective: 99.5
+      description: Pedidos aceitos pela API sem erro (POST /order).
+      sli:
+        events:
+          errorQuery: 'sum(rate(traces_spanmetrics_calls_total{service="api",span_kind="SPAN_KIND_SERVER",span_name="POST /order",status_code="STATUS_CODE_ERROR"}[{{.window}}]))'
+          totalQuery: 'sum(rate(traces_spanmetrics_calls_total{service="api",span_kind="SPAN_KIND_SERVER",span_name="POST /order"}[{{.window}}]))'
+      alerting:
+        name: ApiAvailability
+        labels: { category: availability }
+        annotations:
+          summary: A API de pedidos está queimando o orçamento de erro mais rápido que o permitido.
+        pageAlert: { labels: { severity: page } }
+        ticketAlert: { labels: { severity: ticket } }
+    - name: worker-latency
+      objective: 90
+      description: Pedidos processados pelo worker em até ~1 s (bucket de 1,024 s).
+      sli:
+        events:
+          errorQuery: 'sum(rate(traces_spanmetrics_latency_count{service="worker",span_name="process_order"}[{{.window}}])) - sum(rate(traces_spanmetrics_latency_bucket{service="worker",span_name="process_order",le="1.024"}[{{.window}}]))'
+          totalQuery: 'sum(rate(traces_spanmetrics_latency_count{service="worker",span_name="process_order"}[{{.window}}]))'
+      alerting:
+        name: WorkerLatency
+        labels: { category: latency }
+        annotations:
+          summary: O worker está processando pedidos mais devagar que o permitido.
+        pageAlert: { labels: { severity: page } }
+        ticketAlert: { labels: { severity: ticket } }

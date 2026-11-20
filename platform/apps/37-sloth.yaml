@@ -1,0 +1,24 @@
+# Etapa 2: Sloth gera as regras de SLO e os alertas multi-janela de burn rate a partir de PrometheusServiceLevel.
+# commonPlugins desligado: os SLIs são consultas diretas, não plugins do repositório externo.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: sloth
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "26"
+spec:
+  project: platform-lab
+  source:
+    repoURL: https://slok.github.io/sloth
+    chart: sloth
+    targetRevision: 0.16.0
+    helm:
+      valuesObject:
+        commonPlugins: { enabled: false }
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: lab-observability
+  syncPolicy:
+    automated: { prune: true, selfHeal: true }
+    syncOptions: [ServerSideApply=true]
