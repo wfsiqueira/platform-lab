@@ -99,10 +99,45 @@ Lições:
 
 Defesa em duas camadas: o Access barra quem não é você; o login do Grafana (senha em `~/grafana-admin-lab.txt`) vale como segunda barreira.
 
-## Próximos passos
+## Passo 4 — OpenTelemetry Operator e Collectors (feito em 20/11/2026)
 
-4. OpenTelemetry Operator e Collector (DaemonSet e gateway).
-5. Duas apps Python com fila, com auto-instrumentação pela anotação do Operator.
-6. Correlação trace → logs, métrica → trace (exemplars) e service graph.
-7. Dois SLOs (disponibilidade e latência p95) com Sloth ou Pyrra e alerta de burn rate.
-8. ADR: OpenTelemetry como camada de coleta neutra, para trocar Dynatrace ou Datadog sem reinstrumentar.
+- Operator (chart 0.129.1, cert-manager para o webhook) em `platform/apps/34-otel-operator.yaml`; coletores em `35-otel-collectors.yaml` e `platform/observability/otel/collectors.yaml`.
+- Agent (DaemonSet): lê logs com `filelog` (parser `container`, `include_file_path: true`) e define `service.name` a partir de `k8s.container.name`. Gateway (Deployment): recebe tudo e exporta traces para o Tempo (OTLP gRPC), logs para o Loki (`otlphttp` em `/otlp`) e métricas para o Prometheus (remote write).
+- ADR: `docs/adr/0004-otel-camada-neutra.md` (trocar Dynatrace ou Datadog sem reinstrumentar).
+
+| Problema | Causa | Correção |
+|---|---|---|
+| Gateway em crash: `unknown type "prometheusremotewrite"` | A imagem padrão (distro k8s) não traz o exporter | Imagem contrib 0.162.0 |
+| Logs com `service_name=unknown_service` | Faltava o caminho do arquivo no atributo do log | `include_file_path: true`; contêineres renomeados para `api` e `worker` (o nome `app` colidia) |
+
+## Passo 5 — Demo pipeline com auto-instrumentação (feito em 20/11/2026)
+
+- `platform/demo-pipeline/`: api (FastAPI, ~2% de erros e 3% lentas), fila Redis, worker (BLPOP, ~5% de erros, 5% de 2 s) e loadgen (~2 rps). O traceparent W3C atravessa a fila, então um trace liga api e worker.
+- Código entregue por `configMapGenerator` do Kustomize; o init container instala as dependências em `/deps`.
+- Auto-instrumentação Python pela anotação do Operator, com o CR `Instrumentation` em sync-wave `-1`.
+
+| Problema | Causa | Correção |
+|---|---|---|
+| Pods sem injeção do OTel | O `Instrumentation` não existia quando o pod foi criado (corrida) | sync-wave `-1` e rollout restart |
+| Métricas de span vazias | `overrides` do Tempo vazio | `metrics_generator.processors: [service-graphs, span-metrics]` e `send_exemplars: true` |
+| Exemplar sem link para o trace | Rótulo do trace id diferente | `traceIdLabelName: traceID` |
+
+## Passo 6 — SLOs com Sloth (feito em 20/11/2026)
+
+- Sloth (chart 0.16.0) gera regras e alertas de burn rate multijanela a partir de `PrometheusServiceLevel` (`platform/observability/slos/demo-pipeline.yaml`).
+- `api-availability` (objetivo 99%): chamadas de `POST /order` com `status_code="STATUS_CODE_ERROR"`. `worker-latency` (objetivo 90%): `process_order` abaixo de 1,024 s, via `traces_spanmetrics_latency_bucket`. Ambos com alertas `page` e `ticket`.
+- Medido: api com ~3% de erro (orçamento estourado, alerta ticket disparando); worker com ~6% acima de 1 s (orçamento restante 0,36).
+- Lições: o span do FastAPI tem `SPAN_KIND_INTERNAL`, então filtrar por `SERVER` zera o SLI; o objetivo de 99,5% era irreal para 3% de erro injetado; o histograma customizado do worker usa buckets em ms e não serve (usar as métricas de span, em segundos).
+- Dashboard: `platform/observability/slos/dashboard.yaml` (ConfigMap com `grafana_dashboard: "1"`, uid `slo-demo-pipeline`): orçamento restante, SLI, burn rate, alertas ativos, p95 com exemplars, traces com erro e logs de erro.
+
+## Exercício de CKA ligado aos passos 4 a 6
+
+- Reproduza a injeção de sidecar sem o Operator: um initContainer que copia a instrumentação para um `emptyDir` e variáveis `OTEL_*`.
+- Faça um DaemonSet que lê `/var/log/pods` (hostPath) e explique por que precisa de tolerations para rodar no master.
+- Escreva uma ResourceQuota que barre o gateway do coletor e interprete o evento `FailedCreate`.
+
+## Pendências para fechar a Etapa 2
+
+1. Conferir o dashboard e a correlação na interface (log→trace, trace→logs, exemplar, service map).
+2. Gravar o GIF do alerta ao trace e ao log (entregável).
+3. Alertmanager sem receivers; `demo.wsiqueira.cloud` público sem Access; DNS local devolvendo 192.168.3.164 para `grafana.wsiqueira.cloud` (corrigir na UniFi).
