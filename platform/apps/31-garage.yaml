@@ -1,0 +1,18 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: garage
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "21"
+spec:
+  project: platform-lab
+  source:
+    repoURL: https://github.com/wfsiqueira/platform-lab.git
+    targetRevision: main
+    path: platform/observability/garage
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: lab-observability
+  syncPolicy:
+    automated: { prune: true, selfHeal: true }
