@@ -80,6 +80,17 @@ spec:
             userKey: admin-user
             passwordKey: admin-password
           defaultDashboardsTimezone: America/Sao_Paulo
+          grafana.ini:
+            server:
+              domain: grafana.wsiqueira.cloud
+              root_url: https://grafana.wsiqueira.cloud/
+            users:
+              allow_sign_up: false
+            auth.anonymous:
+              enabled: false
+            security:
+              cookie_secure: true
+              cookie_samesite: lax
           deploymentStrategy: { type: Recreate }   # PVC local (ReadWriteOnce): sem rolling update
           persistence:
             enabled: true

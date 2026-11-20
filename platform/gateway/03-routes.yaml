@@ -29,3 +29,18 @@ spec:
 # FORA do Envoy (docs/adr/0003-passbolt-fora-do-envoy-gateway.md): o túnel vai direto em
 # https://passbolt.application:443. A porta 80 redireciona para HTTPS e o certificado interno é
 # autoassinado e regenerado a cada subida do pod, então não há como validá-lo no Envoy.
+#
+# --- grafana.wsiqueira.cloud ---------------------------------------------------
+# Etapa 2. Túnel -> Envoy -> grafana (porta 80). O namespace lab-observability já tem
+# o rótulo gateway-access=true. Proteção: login do Grafana; Cloudflare Access recomendado.
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: grafana
+  namespace: lab-observability
+spec:
+  parentRefs: [{ name: homelab, namespace: gateway, sectionName: http }]
+  hostnames: ["grafana.wsiqueira.cloud"]
+  rules:
+    - backendRefs: [{ name: kube-prometheus-stack-grafana, port: 80 }]
