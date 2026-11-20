@@ -2,7 +2,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata: { name: api, labels: { app.kubernetes.io/name: api } }
 spec:
-  replicas: 1
+  # replicas: gerido pelo KEDA (platform/autoscaling)
   selector: { matchLabels: { app.kubernetes.io/name: api } }
   template:
     metadata:

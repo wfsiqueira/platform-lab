@@ -20,6 +20,8 @@ spec:
     - https://grafana.github.io/helm-charts
     - https://open-telemetry.github.io/opentelemetry-helm-charts
     - https://slok.github.io/sloth
+    # Etapa 3 (autoscaling)
+    - https://kedacore.github.io/charts
   destinations:
     - { server: https://kubernetes.default.svc, namespace: argocd }
     - { server: https://kubernetes.default.svc, namespace: envoy-gateway-system }

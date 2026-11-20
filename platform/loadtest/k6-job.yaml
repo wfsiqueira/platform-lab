@@ -1,0 +1,54 @@
+# Teste de carga da Etapa 3. NÃO é sincronizado pelo Argo CD (nenhuma Application aponta para cá):
+#   kubectl apply -f platform/loadtest/k6-job.yaml     # inicia
+#   kubectl -n lab-demo delete job k6-spike            # repete (Job é imutável)
+# Perfil: 1 min subindo a 20 req/s, 4 min segurando, 1 min descendo (o loadgen contínuo segue em ~2 req/s).
+apiVersion: v1
+kind: ConfigMap
+metadata: { name: k6-spike-script, namespace: lab-demo }
+data:
+  spike.js: |
+    import http from 'k6/http';
+    export const options = {
+      scenarios: {
+        spike: {
+          executor: 'ramping-arrival-rate',
+          startRate: 2, timeUnit: '1s', preAllocatedVUs: 20, maxVUs: 60,
+          stages: [
+            { target: 20, duration: '1m' },
+            { target: 20, duration: '4m' },
+            { target: 2,  duration: '1m' },
+          ],
+        },
+      },
+    };
+    export default function () {
+      http.post('http://api.lab-demo.svc:8000/order');
+    }
+---
+apiVersion: batch/v1
+kind: Job
+metadata: { name: k6-spike, namespace: lab-demo }
+spec:
+  backoffLimit: 0
+  ttlSecondsAfterFinished: 3600
+  template:
+    metadata: { labels: { app.kubernetes.io/name: k6 } }
+    spec:
+      restartPolicy: Never
+      priorityClassName: lab-default
+      securityContext: { runAsNonRoot: true, runAsUser: 12345, seccompProfile: { type: RuntimeDefault } }
+      containers:
+        - name: k6
+          image: grafana/k6:1.8.3
+          args: ["run", "/scripts/spike.js"]
+          resources:
+            requests: { cpu: 100m, memory: 128Mi }
+            limits: { memory: 384Mi }
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities: { drop: ["ALL"] }
+          volumeMounts: [{ name: script, mountPath: /scripts }]
+      volumes:
+        - name: script
+          configMap: { name: k6-spike-script }

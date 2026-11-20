@@ -1,0 +1,42 @@
+# Etapa 3: KEDA escala Deployments por eventos (tamanho de fila, métrica do Prometheus, cron), inclusive até zero.
+# O chart instala CRDs grandes: ServerSideApply evita o limite de annotation do apply comum.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: keda
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "28"
+spec:
+  project: platform-lab
+  source:
+    repoURL: https://kedacore.github.io/charts
+    chart: keda
+    targetRevision: 2.21.1
+    helm:
+      valuesObject:
+        priorityClassName: lab-default
+        resources:
+          operator:
+            requests: { cpu: 50m, memory: 128Mi }
+            limits: { memory: 384Mi }
+          metricServer:
+            requests: { cpu: 50m, memory: 96Mi }
+            limits: { memory: 256Mi }
+          webhooks:
+            requests: { cpu: 25m, memory: 64Mi }
+            limits: { memory: 192Mi }
+        prometheus:
+          operator:
+            enabled: true
+            serviceMonitor: { enabled: true }
+          metricServer:
+            enabled: true
+            serviceMonitor: { enabled: true }
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: lab-keda
+  syncPolicy:
+    automated: { prune: true, selfHeal: true }
+    syncOptions: [ServerSideApply=true]
+    retry: { limit: 5, backoff: { duration: 30s, factor: 2, maxDuration: 5m } }

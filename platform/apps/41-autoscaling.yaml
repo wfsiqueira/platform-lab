@@ -1,0 +1,21 @@
+# Etapa 3: ScaledObjects do demo-pipeline. Fica depois do KEDA (wave 28) porque depende dos CRDs.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: autoscaling
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "29"
+spec:
+  project: platform-lab
+  source:
+    repoURL: https://github.com/wfsiqueira/platform-lab.git
+    targetRevision: main
+    path: platform/autoscaling
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: lab-demo
+  syncPolicy:
+    automated: { prune: true, selfHeal: true }
+    syncOptions: [SkipDryRunOnMissingResource=true]
+    retry: { limit: 5, backoff: { duration: 30s, factor: 2, maxDuration: 5m } }

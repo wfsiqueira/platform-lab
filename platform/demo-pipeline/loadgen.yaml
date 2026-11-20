@@ -3,7 +3,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata: { name: loadgen, labels: { app.kubernetes.io/name: loadgen } }
 spec:
-  replicas: 1
+  # replicas: gerido pelo KEDA (platform/autoscaling)
   selector: { matchLabels: { app.kubernetes.io/name: loadgen } }
   template:
     metadata: { labels: { app.kubernetes.io/name: loadgen } }

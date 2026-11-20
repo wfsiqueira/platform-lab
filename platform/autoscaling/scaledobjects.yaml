@@ -1,0 +1,60 @@
+# Etapa 3: três gatilhos do KEDA sobre o demo-pipeline.
+# 1) worker: tamanho da fila no Redis, com escala até zero.
+# 2) api: requisições por segundo vindas das métricas de span do OTel (scaler do Prometheus).
+# 3) loadgen: cron, liga o gerador de carga só no horário comercial (versão Kubernetes das Lambdas
+#    que desligavam ambientes não produtivos). Para pausar na mão (demo de escala a zero):
+#    kubectl -n lab-demo annotate scaledobject loadgen autoscaling.keda.sh/paused-replicas=0
+apiVersion: keda.sh/v1alpha1
+kind: ScaledObject
+metadata:
+  name: worker
+  namespace: lab-demo
+spec:
+  scaleTargetRef: { name: worker }
+  minReplicaCount: 0
+  maxReplicaCount: 6
+  pollingInterval: 5
+  cooldownPeriod: 90
+  triggers:
+    - type: redis
+      metadata:
+        address: redis.lab-demo.svc.cluster.local:6379
+        listName: orders
+        listLength: "10"          # alvo: 10 pedidos na fila por réplica
+        activationListLength: "0" # qualquer item acorda o worker a partir de zero
+---
+apiVersion: keda.sh/v1alpha1
+kind: ScaledObject
+metadata:
+  name: api
+  namespace: lab-demo
+spec:
+  scaleTargetRef: { name: api }
+  minReplicaCount: 1
+  maxReplicaCount: 3
+  pollingInterval: 15
+  cooldownPeriod: 120
+  triggers:
+    - type: prometheus
+      metadata:
+        serverAddress: http://kube-prometheus-stack-prometheus.lab-observability.svc:9090
+        query: sum(rate(traces_spanmetrics_calls_total{service="api",span_name="POST /order"}[1m]))
+        threshold: "8"            # alvo: 8 req/s por réplica
+        ignoreNullValues: "true"
+---
+apiVersion: keda.sh/v1alpha1
+kind: ScaledObject
+metadata:
+  name: loadgen
+  namespace: lab-demo
+spec:
+  scaleTargetRef: { name: loadgen }
+  minReplicaCount: 0
+  maxReplicaCount: 1
+  triggers:
+    - type: cron
+      metadata:
+        timezone: America/Sao_Paulo
+        start: 0 8 * * *
+        end: 0 22 * * *
+        desiredReplicas: "1"
