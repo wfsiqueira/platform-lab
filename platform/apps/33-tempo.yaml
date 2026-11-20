@@ -1,0 +1,58 @@
+# Etapa 2: Tempo (single binary), traces no Garage (bucket tempo), com metrics-generator
+# (service graph e span metrics) escrevendo no Prometheus por remote write.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: tempo
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "22"
+spec:
+  project: platform-lab
+  source:
+    repoURL: https://grafana.github.io/helm-charts
+    chart: tempo
+    targetRevision: 1.24.4
+    helm:
+      valuesObject:
+        tempo:
+          retention: 72h
+          extraEnvFrom:
+            - secretRef: { name: tempo-s3 }
+          extraArgs:
+            config.expand-env: "true"
+          storage:
+            trace:
+              backend: s3
+              s3:
+                bucket: tempo
+                endpoint: garage.lab-observability.svc:3900
+                region: garage
+                insecure: true
+                forcepathstyle: true
+                access_key: ${AWS_ACCESS_KEY_ID}
+                secret_key: ${AWS_SECRET_ACCESS_KEY}
+          metricsGenerator:
+            enabled: true
+            remoteWriteUrl: http://kube-prometheus-stack-prometheus.lab-observability.svc:9090/api/v1/write
+          receivers:
+            otlp:
+              protocols:
+                grpc: { endpoint: "0.0.0.0:4317" }
+                http: { endpoint: "0.0.0.0:4318" }
+          resources:
+            requests: { cpu: 100m, memory: 256Mi }
+            limits: { memory: 768Mi }
+        priorityClassName: lab-default
+        persistence:
+          enabled: true
+          size: 2Gi
+          storageClassName: openebs-hostpath
+        serviceMonitor:
+          enabled: true
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: lab-observability
+  syncPolicy:
+    automated: { prune: true, selfHeal: true }
+    syncOptions: [ServerSideApply=true]
