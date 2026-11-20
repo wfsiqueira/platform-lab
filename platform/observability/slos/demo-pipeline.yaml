@@ -1,6 +1,7 @@
 # Dois SLOs do pipeline de demonstração. As fontes são as span metrics do Tempo (metrics-generator).
-# A API injeta ~2% de erros: com objetivo de 99,5% ela queima o orçamento ~4x e dispara o alerta de ticket.
-# Para ver o alerta de página (burn 14,4x), suba FAIL_RATE da API para 0.10.
+# A API injeta erros em ~3% dos pedidos (medido): com objetivo de 99% ela queima o orçamento ~3x e dispara
+# o alerta de ticket. Para ver o alerta de página (burn 6x ou mais), suba FAIL_RATE da API para 0.10.
+# O span do servidor FastAPI sai como SPAN_KIND_INTERNAL, por isso o filtro é pelo nome do span.
 apiVersion: sloth.slok.dev/v1
 kind: PrometheusServiceLevel
 metadata:
@@ -12,12 +13,12 @@ spec:
     team: lab
   slos:
     - name: api-availability
-      objective: 99.5
+      objective: 99
       description: Pedidos aceitos pela API sem erro (POST /order).
       sli:
         events:
-          errorQuery: 'sum(rate(traces_spanmetrics_calls_total{service="api",span_kind="SPAN_KIND_SERVER",span_name="POST /order",status_code="STATUS_CODE_ERROR"}[{{.window}}]))'
-          totalQuery: 'sum(rate(traces_spanmetrics_calls_total{service="api",span_kind="SPAN_KIND_SERVER",span_name="POST /order"}[{{.window}}]))'
+          errorQuery: 'sum(rate(traces_spanmetrics_calls_total{service="api",span_name="POST /order",status_code="STATUS_CODE_ERROR"}[{{.window}}]))'
+          totalQuery: 'sum(rate(traces_spanmetrics_calls_total{service="api",span_name="POST /order"}[{{.window}}]))'
       alerting:
         name: ApiAvailability
         labels: { category: availability }
