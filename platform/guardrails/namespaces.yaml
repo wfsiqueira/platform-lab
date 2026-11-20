@@ -58,8 +58,8 @@ metadata:
 spec:
   hard:
     requests.cpu: "3"
-    requests.memory: 4Gi
-    limits.memory: 8Gi
+    requests.memory: 5Gi
+    limits.memory: 10Gi
     pods: "50"
     persistentvolumeclaims: "10"
 ---

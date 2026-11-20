@@ -1,0 +1,109 @@
+# OTel como camada de coleta neutra (ver docs/adr/0004-otel-camada-neutra.md).
+# Apps -> agent (DaemonSet, por nó: OTLP + logs de arquivo) -> gateway (Deployment) -> Tempo, Loki, Prometheus.
+# Trocar de backend (Dynatrace, Datadog, Grafana Cloud) = mexer só nos exporters do gateway.
+apiVersion: opentelemetry.io/v1beta1
+kind: OpenTelemetryCollector
+metadata:
+  name: gateway
+  namespace: lab-observability
+spec:
+  mode: deployment
+  replicas: 1
+  priorityClassName: lab-default
+  resources:
+    requests: { cpu: 50m, memory: 128Mi }
+    limits: { memory: 512Mi }
+  config:
+    receivers:
+      otlp:
+        protocols:
+          grpc: { endpoint: 0.0.0.0:4317 }
+          http: { endpoint: 0.0.0.0:4318 }
+    processors:
+      memory_limiter: { check_interval: 1s, limit_percentage: 80, spike_limit_percentage: 25 }
+      batch: {}
+    exporters:
+      otlp/tempo:
+        endpoint: tempo.lab-observability.svc:4317
+        tls: { insecure: true }
+      otlphttp/loki:
+        endpoint: http://loki.lab-observability.svc:3100/otlp
+      prometheusremotewrite:
+        endpoint: http://kube-prometheus-stack-prometheus.lab-observability.svc:9090/api/v1/write
+        resource_to_telemetry_conversion: { enabled: true }
+    service:
+      pipelines:
+        traces:
+          receivers: [otlp]
+          processors: [memory_limiter, batch]
+          exporters: [otlp/tempo]
+        logs:
+          receivers: [otlp]
+          processors: [memory_limiter, batch]
+          exporters: [otlphttp/loki]
+        metrics:
+          receivers: [otlp]
+          processors: [memory_limiter, batch]
+          exporters: [prometheusremotewrite]
+---
+apiVersion: opentelemetry.io/v1beta1
+kind: OpenTelemetryCollector
+metadata:
+  name: agent
+  namespace: lab-observability
+spec:
+  mode: daemonset
+  priorityClassName: lab-default
+  image: ghcr.io/open-telemetry/opentelemetry-collector-releases/opentelemetry-collector-contrib:0.162.0
+  resources:
+    requests: { cpu: 25m, memory: 64Mi }
+    limits: { memory: 128Mi }
+  volumes:
+    - name: varlogpods
+      hostPath: { path: /var/log/pods }
+  volumeMounts:
+    - name: varlogpods
+      mountPath: /var/log/pods
+      readOnly: true
+  config:
+    receivers:
+      otlp:
+        protocols:
+          grpc: { endpoint: 0.0.0.0:4317 }
+          http: { endpoint: 0.0.0.0:4318 }
+      filelog:
+        # Só os namespaces das apps; os do próprio stack ficam de fora para não criar laço.
+        include:
+          - /var/log/pods/lab-demo_*/*/*.log
+          - /var/log/pods/baseplus-hml_*/*/*.log
+        include_file_path: false
+        start_at: end
+        operators:
+          - type: container
+            id: parser
+    processors:
+      memory_limiter: { check_interval: 1s, limit_percentage: 80, spike_limit_percentage: 25 }
+      batch: {}
+      transform/logs:
+        log_statements:
+          - context: log
+            statements:
+              - set(resource.attributes["service.name"], resource.attributes["k8s.container.name"]) where resource.attributes["service.name"] == nil
+    exporters:
+      otlp/gateway:
+        endpoint: gateway-collector.lab-observability.svc:4317
+        tls: { insecure: true }
+    service:
+      pipelines:
+        traces:
+          receivers: [otlp]
+          processors: [memory_limiter, batch]
+          exporters: [otlp/gateway]
+        metrics:
+          receivers: [otlp]
+          processors: [memory_limiter, batch]
+          exporters: [otlp/gateway]
+        logs:
+          receivers: [otlp, filelog]
+          processors: [memory_limiter, transform/logs, batch]
+          exporters: [otlp/gateway]
