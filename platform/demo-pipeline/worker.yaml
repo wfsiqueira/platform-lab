@@ -9,7 +9,7 @@ spec:
       labels: { app.kubernetes.io/name: worker }
       annotations:
         instrumentation.opentelemetry.io/inject-python: "lab-python"
-        instrumentation.opentelemetry.io/container-names: "app"
+        instrumentation.opentelemetry.io/container-names: "worker"
     spec:
       priorityClassName: lab-default
       securityContext:
@@ -33,7 +33,7 @@ spec:
             - { name: deps, mountPath: /deps }
             - { name: tmp, mountPath: /tmp }
       containers:
-        - name: app
+        - name: worker
           image: python:3.12-slim
           command: ["python","/app/worker.py"]
           env:
