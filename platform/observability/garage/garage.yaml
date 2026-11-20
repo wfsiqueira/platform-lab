@@ -71,8 +71,9 @@ spec:
           readinessProbe:
             httpGet: { path: /health, port: admin }
             periodSeconds: 10
+          # /health devolve 503 até o layout existir; liveness usa TCP para não matar o pod antes do bootstrap.
           livenessProbe:
-            httpGet: { path: /health, port: admin }
+            tcpSocket: { port: rpc }
             initialDelaySeconds: 15
             periodSeconds: 20
           resources:
