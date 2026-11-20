@@ -78,7 +78,7 @@ spec:
         include:
           - /var/log/pods/lab-demo_*/*/*.log
           - /var/log/pods/baseplus-hml_*/*/*.log
-        include_file_path: false
+        include_file_path: true   # o parser 'container' extrai namespace/pod/container do caminho
         start_at: end
         operators:
           - type: container

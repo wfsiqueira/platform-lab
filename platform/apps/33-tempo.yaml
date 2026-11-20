@@ -34,7 +34,17 @@ spec:
                 secret_key: ${AWS_SECRET_ACCESS_KEY}
           metricsGenerator:
             enabled: true
-            remoteWriteUrl: http://kube-prometheus-stack-prometheus.lab-observability.svc:9090/api/v1/write
+            # send_exemplars: o histograma de latência carrega o trace_id (métrica -> trace no Grafana).
+            storage:
+              path: /tmp/tempo
+              remote_write:
+                - url: http://kube-prometheus-stack-prometheus.lab-observability.svc:9090/api/v1/write
+                  send_exemplars: true
+          # Sem estes processadores o gerador fica ligado mas não produz nada.
+          overrides:
+            defaults:
+              metrics_generator:
+                processors: [service-graphs, span-metrics]
           receivers:
             otlp:
               protocols:
