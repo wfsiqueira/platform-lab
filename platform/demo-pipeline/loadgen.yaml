@@ -1,0 +1,23 @@
+# Gera ~2 pedidos por segundo para a API (tráfego contínuo para traces, logs e SLOs).
+apiVersion: apps/v1
+kind: Deployment
+metadata: { name: loadgen, labels: { app.kubernetes.io/name: loadgen } }
+spec:
+  replicas: 1
+  selector: { matchLabels: { app.kubernetes.io/name: loadgen } }
+  template:
+    metadata: { labels: { app.kubernetes.io/name: loadgen } }
+    spec:
+      priorityClassName: lab-default
+      securityContext: { runAsNonRoot: true, runAsUser: 100, seccompProfile: { type: RuntimeDefault } }
+      containers:
+        - name: loadgen
+          image: curlimages/curl:8.11.1
+          command: ["sh", "-c", "while true; do curl -s -o /dev/null -X POST http://api:8000/order; sleep 0.5; done"]
+          resources:
+            requests: { cpu: 10m, memory: 16Mi }
+            limits: { memory: 64Mi }
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities: { drop: ["ALL"] }

@@ -1,0 +1,18 @@
+# Auto-instrumentação Python pelo Operator: o pod só precisa da anotação
+# instrumentation.opentelemetry.io/inject-python. Python exporta por OTLP/HTTP (porta 4318).
+apiVersion: opentelemetry.io/v1alpha1
+kind: Instrumentation
+metadata:
+  name: lab-python
+spec:
+  exporter:
+    endpoint: http://agent-collector.lab-observability.svc:4318
+  propagators: [tracecontext, baggage]
+  sampler:
+    type: parentbased_traceidratio
+    argument: "1"
+  python:
+    env:
+      - { name: OTEL_TRACES_EXPORTER, value: otlp }
+      - { name: OTEL_METRICS_EXPORTER, value: otlp }
+      - { name: OTEL_EXPORTER_OTLP_PROTOCOL, value: http/protobuf }

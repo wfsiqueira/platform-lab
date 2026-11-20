@@ -1,0 +1,22 @@
+# Etapa 2: duas apps Python (api e worker) com Redis como fila, auto-instrumentadas pelo OTel Operator.
+# Reaproveitadas na etapa do KEDA (escala do worker pelo tamanho da fila).
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: demo-pipeline
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "25"
+spec:
+  project: platform-lab
+  source:
+    repoURL: https://github.com/wfsiqueira/platform-lab.git
+    targetRevision: main
+    path: platform/demo-pipeline
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: lab-demo
+  syncPolicy:
+    automated: { prune: true, selfHeal: true }
+    syncOptions: [SkipDryRunOnMissingResource=true]
+    retry: { limit: 5, backoff: { duration: 30s, factor: 2, maxDuration: 5m } }

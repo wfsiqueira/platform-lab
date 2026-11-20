@@ -1,0 +1,71 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata: { name: api, labels: { app.kubernetes.io/name: api } }
+spec:
+  replicas: 1
+  selector: { matchLabels: { app.kubernetes.io/name: api } }
+  template:
+    metadata:
+      labels: { app.kubernetes.io/name: api }
+      annotations:
+        instrumentation.opentelemetry.io/inject-python: "lab-python"
+        instrumentation.opentelemetry.io/container-names: "app"
+    spec:
+      priorityClassName: lab-default
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+        seccompProfile: { type: RuntimeDefault }
+      initContainers:
+        - name: deps
+          image: python:3.12-slim
+          command: ["pip", "install", "--no-cache-dir", "--target", "/deps", "-r", "/app/requirements.txt"]
+          env: [{ name: HOME, value: /tmp }]
+          resources:
+            requests: { cpu: 50m, memory: 96Mi }
+            limits: { memory: 256Mi }
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities: { drop: ["ALL"] }
+          volumeMounts:
+            - { name: app, mountPath: /app }
+            - { name: deps, mountPath: /deps }
+            - { name: tmp, mountPath: /tmp }
+      containers:
+        - name: app
+          image: python:3.12-slim
+          command: ["python","-m","uvicorn","api:app","--host","0.0.0.0","--port","8000","--app-dir","/app"]
+          env:
+            - { name: OTEL_SERVICE_NAME, value: api }
+            - { name: PYTHONPATH, value: /deps:/app }
+            - { name: PYTHONDONTWRITEBYTECODE, value: "1" }
+            - { name: PYTHONUNBUFFERED, value: "1" }
+          ports: [{ name: http, containerPort: 8000 }]
+          readinessProbe: { httpGet: { path: /healthz, port: http }, periodSeconds: 5 }
+          livenessProbe: { httpGet: { path: /healthz, port: http }, initialDelaySeconds: 20, periodSeconds: 20 }
+          resources:
+            requests: { cpu: 50m, memory: 80Mi }
+            limits: { memory: 192Mi }
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities: { drop: ["ALL"] }
+          volumeMounts:
+            - { name: app, mountPath: /app, readOnly: true }
+            - { name: deps, mountPath: /deps, readOnly: true }
+            - { name: tmp, mountPath: /tmp }
+      volumes:
+        - name: app
+          configMap: { name: pipeline-code }
+        - name: deps
+          emptyDir: { sizeLimit: 256Mi }
+        - name: tmp
+          emptyDir: { sizeLimit: 64Mi }
+---
+apiVersion: v1
+kind: Service
+metadata: { name: api }
+spec:
+  selector: { app.kubernetes.io/name: api }
+  ports: [{ name: http, port: 8000, targetPort: http }]
