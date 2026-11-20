@@ -29,11 +29,23 @@ spec:
         kubeScheduler: { enabled: false }
         kubeControllerManager: { enabled: false }
         kubeProxy: { enabled: false }
+        # O chart criaria um Service do CoreDNS em kube-system, que o AppProject do lab não permite
+        # (o lab não escreve em kube-system). O ServiceMonitor abaixo lê o Service kube-dns existente.
+        coreDns: { enabled: false }
         prometheusOperator:
           resources:
             requests: { cpu: 25m, memory: 64Mi }
             limits: { memory: 256Mi }
         prometheus:
+          additionalServiceMonitors:
+            - name: coredns
+              selector: { matchLabels: { k8s-app: kube-dns } }
+              namespaceSelector: { matchNames: [kube-system] }
+              endpoints:
+                - port: metrics
+                  interval: 30s
+                  relabelings:
+                    - { action: replace, targetLabel: job, replacement: coredns }   # os dashboards esperam job="coredns"
           prometheusSpec:
             priorityClassName: lab-default
             retention: 7d
