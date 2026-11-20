@@ -299,11 +299,11 @@ kubectl -n argocd get applications
 
 **Validação:** `platform-lab-root`, `guardrails`, `envoy-gateway` com `Synced/Healthy`; PriorityClasses `homelab-critical` e `lab-default` criadas.
 
-Em seguida, com os CRDs da Gateway API já instalados, o external-dns precisa ler `HTTPRoute`. Em 20/11/2026 isso foi aplicado direto nos recursos (ClusterRole com `gateways`, `httproutes` e `namespaces`; argumento `--source=gateway-httproute` no Deployment). **O release Helm ainda não sabe disso**: um `helm upgrade` sem `--set` reverte a mudança. Para tornar permanente:
+Em seguida, com os CRDs da Gateway API já instalados, o external-dns precisa ler `HTTPRoute`. Em 20/11/2026 isso foi aplicado direto nos recursos (ClusterRole com `gateways`, `httproutes` e `namespaces`; argumentos `--source=gateway-httproute` e `--cloudflare-proxied` no Deployment). **O release Helm ainda não sabe disso**: um `helm upgrade` sem `--set` reverte a mudança. Para tornar permanente:
 
 ```bash
 helm upgrade external-dns <repo>/external-dns --version 1.17.0 -n cloudflare --reuse-values \
-  --set 'sources={ingress,gateway-httproute}'
+  --set 'sources={ingress,gateway-httproute}' --set 'extraArgs={--cloudflare-proxied}'
 ```
 
 **Rollback:** `kubectl -n argocd delete application platform-lab-root guardrails envoy-gateway gateway demo` e depois `kubectl -n argocd delete appproject platform-lab`. As Applications não têm o finalizer `resources-finalizer.argocd.argoproj.io`, então apagá-las **não** apaga o que elas criaram; remova os recursos à mão se quiser limpar. As apps do baseplus (projeto `baseplus`) não são afetadas.
@@ -383,7 +383,19 @@ Pendente para a etapa 2: baseplus e Keycloak (HTTPRoutes no repositório da base
 | `kubeadm upgrade apply` falhou: "static Pod hash … did not change" | Arquivos `*.yaml.bak` de maio/2025 dentro de `/etc/kubernetes/manifests/`; o kubelet sobe tudo que está na pasta, e havia dois kube-apiserver (e dois controller-manager/scheduler, que explicavam 22 restarts) | Movi os `.bak` para `/root`, o control plane estabilizou e o `apply` passou | Static pods, leitura de logs do kubelet, rollback do kubeadm (que voltou o apiserver mas não o etcd) |
 | Apps do lab em `Unknown` com `InvalidSpecError`: "namespace '' do not match any of the allowed destinations in project 'platform-lab'" | `destination` sem `namespace`; o projeto `default` aceita, um AppProject com lista de namespaces não | `destination.namespace` explícito em cada Application | AppProject (sourceRepos, destinations, clusterResourceWhitelist), isolamento entre times no Argo CD |
 | Teste de XFP: enviado `X-Forwarded-Proto: https`, o echo recebeu `http` | Sem hops confiáveis, o Envoy trata a requisição como de borda e reescreve o header | `ClientTrafficPolicy` com `clientIPDetection.xForwardedFor.numTrustedHops: 1` (o cloudflared) em `platform/gateway/02-client-traffic-policy.yaml` | Headers de proxy (XFF/XFP), confiança entre saltos, policies de extensão da Gateway API |
-| `demo.wsiqueira.cloud` com erro no navegador; `dns.google/resolve` devolve só o CNAME `*.cfargotunnel.com` (TTL 300), sem IPs | Registro criado pelo external-dns sem proxy: a annotation `cloudflare-proxied` do Gateway não vale para rotas | Mesma annotation na `HTTPRoute` (`platform/demo/echo.yaml`) | Como o external-dns resolve annotations em fontes Gateway API; checar DNS com resolvedor público |
+| `demo.wsiqueira.cloud` com erro no navegador; `dns.google/resolve` devolve só o CNAME `*.cfargotunnel.com` (TTL 300), sem IPs; no painel o registro está "DNS only" | O external-dns v0.17 não aplica `cloudflare-proxied` vindo de Gateway nem de HTTPRoute (testei as duas), e não altera o proxy de registro já existente | Flag global `--cloudflare-proxied` (todos os hosts do túnel são proxied) e, uma vez, ligar o proxy do registro no painel | Limites do external-dns com Gateway API; checar DNS com resolvedor público e o estado no painel |
+| Argo CD atrás do Envoy: sem `server.insecure` o `argocd-server` redireciona HTTP para HTTPS (loop) | O Envoy fala HTTP com o backend; o TLS termina na Cloudflare | `server.insecure: "true"` no `argocd-cmd-params-cm` + restart do `argocd-server` e rota do túnel para o Envoy, nessa ordem e em seguida | Corte coordenado de duas peças; o Ingress antigo foi aplicado à mão e some junto com o nginx |
 | Drain do nó com o Postgres primário estourou o tempo | O PDB permitia, mas o shutdown "smart" do CloudNativePG leva minutos | Switchover do primário antes do drain e `DRAIN_TIMEOUT=600s` | `terminationGracePeriodSeconds` também segura drain; operação de bancos em Kubernetes |
 | Velero "Completed" mas sem dados | Sem file system backup (Pod Volume Backups: none) e MinIO dentro do próprio cluster | Dump do Passbolt + Secrets (GPG/JWT) no Mac; snapshots das VMs | Backup que não foi testado não é backup |
 | Componentes vencidos (Istio 1.21, Calico 3.28, ingress-nginx) | Cluster sem ciclo de upgrade | Matriz de compatibilidade antes de cada salto | Gestão de dependências e upgrade seguro |
+
+### Passo 14 — corte do Argo CD (concluído em 20/11/2026)
+
+O `server.insecure` foi aplicado direto no `argocd-cmd-params-cm`, não pelo Helm. **O release ainda não sabe disso**: um `helm upgrade` sem o `--set` desfaz. Para tornar permanente:
+
+```bash
+helm -n argocd upgrade argocd argo/argo-cd --version 10.11.6 --reuse-values \
+  --set 'configs.params.server\.insecure=true'
+```
+
+**Rollback:** `kubectl -n argocd patch cm argocd-cmd-params-cm --type merge -p '{"data":{"server.insecure":"false"}}'`, restart do `argocd-server` e, no painel, rota `argocd` de volta para `https://ingress-nginx-controller.kube-system.svc.cluster.local:443` com `noTLSVerify` e `originServerName=argocd.wsiqueira.cloud`. O Ingress `argocd-server` continua no cluster até a remoção do nginx.

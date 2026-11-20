@@ -14,6 +14,16 @@ O túnel é gerenciado pelo **painel da Cloudflare** (configuração remota). Es
 
 O **Passbolt não passa pelo ingress-nginx**: o túnel fala direto com o Service dele. O Ingress `passbolt-ingress` não recebe tráfego externo; hoje ele só serve para o external-dns manter o registro DNS do Passbolt.
 
+## Estado em 20/11/2026
+
+| Ordem | Hostname | Destino (service) | Observação |
+| --- | --- | --- | --- |
+| 1 | `passbolt.wsiqueira.cloud` | `https://passbolt.application.svc.cluster.local:443` | `noTLSVerify`; sem mudança |
+| 2 | `baseplus-hml.wsiqueira.cloud` | `https://ingress-nginx-controller.kube-system.svc.cluster.local:443` | ainda no nginx |
+| 3 | `auth-baseplus-hml.wsiqueira.cloud` | `https://ingress-nginx-controller.kube-system.svc.cluster.local:443` | ainda no nginx |
+| 4 | `argocd.wsiqueira.cloud` | `http://envoy-homelab.envoy-gateway-system.svc.cluster.local:80` | **migrado** (sem `originServerName` nem `noTLSVerify`) |
+| 5 | `demo.wsiqueira.cloud` | `http://envoy-homelab.envoy-gateway-system.svc.cluster.local:80` | novo |
+
 ## Destino após a migração
 
 | Hostname | Destino |
