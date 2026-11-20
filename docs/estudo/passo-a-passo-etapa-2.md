@@ -140,4 +140,9 @@ Defesa em duas camadas: o Access barra quem não é você; o login do Grafana (s
 
 1. Conferir o dashboard e a correlação na interface (log→trace, trace→logs, exemplar, service map).
 2. Gravar o GIF do alerta ao trace e ao log (entregável).
-3. Alertmanager sem receivers; `demo.wsiqueira.cloud` público sem Access; DNS local devolvendo 192.168.3.164 para `grafana.wsiqueira.cloud` (corrigir na UniFi).
+3. Alertmanager sem receivers; DNS local devolvendo 192.168.3.164 para `grafana.wsiqueira.cloud` (corrigir na UniFi).
+
+## Passo 7 — `demo.wsiqueira.cloud` atrás do Access (feito em 20/11/2026)
+
+- Aplicação `demo` criada no Cloudflare Access (Zero Trust → Access controls → Applications), com a política reutilizável "Somente Willian", igual à do Grafana e do Argo CD.
+- Verificação pela borda, sem o DNS local: `curl --resolve demo.wsiqueira.cloud:443:<IP do Cloudflare> https://demo.wsiqueira.cloud/` devolve 302 para `wsiqueira-cloud.cloudflareaccess.com`. Os três hosts (demo, grafana, argocd) respondem igual.
