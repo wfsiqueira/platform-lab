@@ -78,6 +78,27 @@ Por que não o AWS Emulator do cluster: o estado dele fica em `emptyDir` e some 
 
 Verificação: `/api/datasources/uid/loki/health` e `/tempo/health` devolvem OK.
 
+## Passo 3b — Grafana público com Cloudflare Access (feito em 20/11/2026)
+
+Caminho: navegador, Cloudflare Access, túnel, Envoy (`homelab`), HTTPRoute `grafana`, Service do Grafana.
+
+Ordem que importa: primeiro a aplicação Access, depois a rota do túnel. Assim o hostname nunca fica público sem proteção.
+
+1. Zero Trust, Access controls, Applications: aplicação `grafana` (self-hosted) em `grafana.wsiqueira.cloud`, com a política reutilizável "Somente Willian" (mesma do Argo CD).
+2. Túnel `kubernetes-tunnel-cloudflare`: rota publicada `grafana.wsiqueira.cloud` para `http://envoy-homelab.envoy-gateway-system.svc.cluster.local:80`.
+3. Git: `HTTPRoute grafana` em `platform/gateway/03-routes.yaml` e `grafana.ini` (`root_url`, `allow_sign_up: false`, anônimo desligado, cookie seguro) no `kube-prometheus-stack`.
+
+Verificação: com o IP público forçado, `/`, `/api/health`, `/api/datasources` e `/metrics` respondem 302 para `*.cloudflareaccess.com`.
+
+Lições:
+
+| Sintoma | Causa | O que fazer |
+| --- | --- | --- |
+| `curl` falha com código 7 e `dig` mostra `192.168.3.164` | O roteador local (UniFi, 192.168.3.1) guardou o registro criado pelo external-dns antes da rota do túnel | Conferir pelo DNS-over-HTTPS (`cloudflare-dns.com/dns-query`) ou forçar o IP com `curl --resolve`; o cache expira sozinho |
+| Dois criadores do mesmo registro | O external-dns cria o registro a partir do HTTPRoute e o túnel o substitui por um registro do tipo Tunnel proxied | O resultado final é o do túnel; manter o external-dns em `upsert-only` |
+
+Defesa em duas camadas: o Access barra quem não é você; o login do Grafana (senha em `~/grafana-admin-lab.txt`) vale como segunda barreira.
+
 ## Próximos passos
 
 4. OpenTelemetry Operator e Collector (DaemonSet e gateway).
