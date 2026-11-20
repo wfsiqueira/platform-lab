@@ -56,10 +56,30 @@ Resultado em 20/11: 58 de 59 alvos *up* (apiserver, kubelet, coredns, node-expor
 
 Os componentes do control plane expõem métricas em `127.0.0.1`. Para o Prometheus enxergá-los, edite os manifestos estáticos em `/etc/kubernetes/manifests/` (`kube-scheduler.yaml`, `kube-controller-manager.yaml`) trocando `--bind-address=127.0.0.1` por `0.0.0.0`, e o `metrics-bind-address` do kube-proxy no ConfigMap `kube-proxy`. Para o etcd, use `--listen-metrics-urls`. É exercício clássico de edição de static pod e de troubleshooting do control plane; só reative depois os `kube*.enabled` do chart.
 
+## Passo 2 — Garage (S3) (feito em 20/11/2026)
+
+Arquivos: `platform/apps/31-garage.yaml` (Application) e `platform/observability/garage/` (`garage.yaml` com StatefulSet de 1 réplica, e `bootstrap.sh`).
+
+Ordem: o Secret `garage-secrets` (rpc-secret e admin-token) é criado fora do Git; o Argo CD sobe o pod; o `bootstrap.sh` aplica o layout (uma zona, 10 GiB), cria os buckets `loki` e `tempo`, uma chave por bucket e grava os Secrets `loki-s3` e `tempo-s3` sem imprimir valores.
+
+| Problema | Causa | Correção |
+| --- | --- | --- |
+| Pod em CrashLoop (45 reinícios) | `/health` do Garage responde 503 até existir layout, e o liveness matava o pod antes do bootstrap | Liveness por TCP na porta RPC; readiness continua em `/health` (pod só fica 1/1 depois do layout) |
+
+Por que não o AWS Emulator do cluster: o estado dele fica em `emptyDir` e some quando o pod reinicia, e a observabilidade não deve depender de uma ferramenta de teste.
+
+## Passo 3 — Loki, Tempo e correlação no Grafana (feito em 20/11/2026)
+
+- `platform/apps/32-loki.yaml`: chart `grafana/loki` 7.7.0, modo SingleBinary, chunks no Garage, retenção de 72 h.
+- `platform/apps/33-tempo.yaml`: chart `grafana/tempo` 1.24.4, traces no Garage, receptor OTLP (4317 e 4318) e metrics-generator escrevendo no Prometheus (service graph e span metrics).
+- `platform/apps/30-observability.yaml`: datasources Loki e Tempo, exemplars do Prometheus apontando para o Tempo, log para trace por `trace_id` e trace para logs por `service.name`.
+- As credenciais S3 entram por variável de ambiente (`extraEnvFrom`) e `config.expand-env`, então nenhum segredo vai para o Git.
+- Lição: no Grafana, `$` literal em provisionamento precisa de `$$`.
+
+Verificação: `/api/datasources/uid/loki/health` e `/tempo/health` devolvem OK.
+
 ## Próximos passos
 
-2. Garage (S3) no `lab-observability`, com buckets para Loki e Tempo.
-3. Loki e Tempo apontando para o Garage, conectados ao Grafana como data sources.
 4. OpenTelemetry Operator e Collector (DaemonSet e gateway).
 5. Duas apps Python com fila, com auto-instrumentação pela anotação do Operator.
 6. Correlação trace → logs, métrica → trace (exemplars) e service graph.
