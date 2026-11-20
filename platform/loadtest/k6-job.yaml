@@ -21,8 +21,17 @@ data:
         },
       },
     };
+    // O k6 reaproveitou um único trace id em todas as requisições (um trace de ~10 mil spans
+    // estourou o limite de 5 MB do Tempo e levou o Tempo a OOMKilled). Gera um traceparent novo por requisição.
+    function hex(n) {
+      let s = '';
+      for (let i = 0; i < n; i++) s += Math.floor(Math.random() * 16).toString(16);
+      return s;
+    }
     export default function () {
-      http.post('http://api.lab-demo.svc:8000/order');
+      http.post('http://api.lab-demo.svc:8000/order', null, {
+        headers: { traceparent: `00-${hex(32)}-${hex(16)}-01` },
+      });
     }
 ---
 apiVersion: batch/v1
