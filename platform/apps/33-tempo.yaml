@@ -51,8 +51,8 @@ spec:
                 grpc: { endpoint: "0.0.0.0:4317" }
                 http: { endpoint: "0.0.0.0:4318" }
           resources:
-            requests: { cpu: 100m, memory: 256Mi }
-            limits: { memory: 768Mi }
+            requests: { cpu: 100m, memory: 512Mi }
+            limits: { memory: 1536Mi }  # 768Mi estourava (OOMKilled) com o teste de carga do k6
         priorityClassName: lab-default
         persistence:
           enabled: true

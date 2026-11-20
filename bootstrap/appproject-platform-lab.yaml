@@ -27,5 +27,8 @@ spec:
     - { server: https://kubernetes.default.svc, namespace: envoy-gateway-system }
     - { server: https://kubernetes.default.svc, namespace: gateway }
     - { server: https://kubernetes.default.svc, namespace: "lab-*" }
+    # Etapa 3: o chart do KEDA cria um RoleBinding em kube-system (leitor de extension-apiserver-authentication),
+    # exigido pelo metrics apiserver. Aceitamos o destino; o risco é uma app do projeto escrever em kube-system.
+    - { server: https://kubernetes.default.svc, namespace: kube-system }
   clusterResourceWhitelist:
     - { group: "*", kind: "*" }
