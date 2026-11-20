@@ -88,6 +88,47 @@ spec:
           resources:
             requests: { cpu: 50m, memory: 160Mi }
             limits: { memory: 384Mi }
+          # Métrica -> trace: exemplars do Prometheus apontam para o Tempo.
+          sidecar:
+            datasources:
+              exemplarTraceIdDestinations:
+                datasourceUid: tempo
+                traceIdLabelName: trace_id
+          additionalDataSources:
+            - name: Loki
+              uid: loki
+              type: loki
+              access: proxy
+              url: http://loki.lab-observability.svc:3100
+              jsonData:
+                # Log -> trace: campo trace_id (ou traceID) vira link para o Tempo.
+                derivedFields:
+                  - name: trace_id
+                    matcherRegex: '"?trace_?[iI][dD]"?[=:]\s*"?(\w+)'
+                    url: '$${__value.raw}'
+                    datasourceUid: tempo
+            - name: Tempo
+              uid: tempo
+              type: tempo
+              access: proxy
+              url: http://tempo.lab-observability.svc:3200
+              jsonData:
+                # Trace -> logs e trace -> métricas; service graph vem do metrics-generator.
+                tracesToLogsV2:
+                  datasourceUid: loki
+                  spanStartTimeShift: "-5m"
+                  spanEndTimeShift: "5m"
+                  filterByTraceID: true
+                  filterBySpanID: false
+                  tags:
+                    - { key: service.name, value: service_name }
+                tracesToMetrics:
+                  datasourceUid: prometheus
+                serviceMap:
+                  datasourceUid: prometheus
+                nodeGraph: { enabled: true }
+                lokiSearch:
+                  datasourceUid: loki
         kube-state-metrics:
           resources:
             requests: { cpu: 10m, memory: 48Mi }
