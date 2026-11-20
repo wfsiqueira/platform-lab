@@ -1,0 +1,102 @@
+# Etapa 2, passo 1: Prometheus + Alertmanager + Grafana (kube-prometheus-stack).
+# O Secret "grafana-admin" (admin-user, admin-password) NÃO está no git: criar com
+# docs/estudo/passo-a-passo-etapa-2.md (Passo 1) antes do primeiro sync do Grafana.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: kube-prometheus-stack
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "20"
+spec:
+  project: platform-lab
+  source:
+    repoURL: https://prometheus-community.github.io/helm-charts
+    chart: kube-prometheus-stack
+    targetRevision: 93.6.0
+    helm:
+      valuesObject:
+        defaultRules:
+          rules:
+            # kubeadm expõe etcd, scheduler, controller-manager e kube-proxy só em 127.0.0.1.
+            # Ficam desligados até o exercício de CKA que muda o bind-address (ver o guia).
+            etcd: false
+            kubeSchedulerAlerting: false
+            kubeSchedulerRecording: false
+            kubeControllerManager: false
+            kubeProxy: false
+        kubeEtcd: { enabled: false }
+        kubeScheduler: { enabled: false }
+        kubeControllerManager: { enabled: false }
+        kubeProxy: { enabled: false }
+        prometheusOperator:
+          resources:
+            requests: { cpu: 25m, memory: 64Mi }
+            limits: { memory: 256Mi }
+        prometheus:
+          prometheusSpec:
+            priorityClassName: lab-default
+            retention: 7d
+            retentionSize: 8GB
+            # Enxerga ServiceMonitors/PodMonitors/regras de qualquer release (Loki, Tempo, OTel).
+            serviceMonitorSelectorNilUsesHelmValues: false
+            podMonitorSelectorNilUsesHelmValues: false
+            ruleSelectorNilUsesHelmValues: false
+            probeSelectorNilUsesHelmValues: false
+            # Exemplars (métrica -> trace) e remote_write receiver (Mimir/OTel no futuro).
+            enableRemoteWriteReceiver: true
+            enableFeatures: [exemplar-storage]
+            resources:
+              requests: { cpu: 200m, memory: 768Mi }
+              limits: { memory: 1536Mi }
+            storageSpec:
+              volumeClaimTemplate:
+                spec:
+                  storageClassName: openebs-hostpath
+                  accessModes: [ReadWriteOnce]
+                  resources: { requests: { storage: 10Gi } }
+        alertmanager:
+          alertmanagerSpec:
+            priorityClassName: lab-default
+            resources:
+              requests: { cpu: 10m, memory: 48Mi }
+              limits: { memory: 128Mi }
+        grafana:
+          priorityClassName: lab-default
+          admin:
+            existingSecret: grafana-admin
+            userKey: admin-user
+            passwordKey: admin-password
+          defaultDashboardsTimezone: America/Sao_Paulo
+          deploymentStrategy: { type: Recreate }   # PVC local (ReadWriteOnce): sem rolling update
+          persistence:
+            enabled: true
+            storageClassName: openebs-hostpath
+            size: 2Gi
+          resources:
+            requests: { cpu: 50m, memory: 160Mi }
+            limits: { memory: 384Mi }
+        kube-state-metrics:
+          resources:
+            requests: { cpu: 10m, memory: 48Mi }
+            limits: { memory: 128Mi }
+        prometheus-node-exporter:
+          resources:
+            requests: { cpu: 10m, memory: 24Mi }
+            limits: { memory: 64Mi }
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: lab-observability
+  ignoreDifferences:
+    # O operador injeta o caBundle nos webhooks; sem isto o Argo CD mostra OutOfSync para sempre.
+    - group: admissionregistration.k8s.io
+      kind: ValidatingWebhookConfiguration
+      jqPathExpressions: [".webhooks[]?.clientConfig.caBundle"]
+    - group: admissionregistration.k8s.io
+      kind: MutatingWebhookConfiguration
+      jqPathExpressions: [".webhooks[]?.clientConfig.caBundle"]
+  syncPolicy:
+    automated: { prune: true, selfHeal: true }
+    syncOptions:
+      - ServerSideApply=true      # CRDs do Prometheus Operator são grandes demais para client-side
+      - RespectIgnoreDifferences=true

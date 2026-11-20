@@ -1,6 +1,6 @@
 # AppProject do laboratório. Isola as apps do platform-lab das apps do baseplus
 # (projeto "baseplus") e do projeto "default".
-# - sourceRepos: só este repo e o chart OCI do Envoy Gateway.
+# - sourceRepos: só este repo, o chart OCI do Envoy Gateway e os repos Helm da observabilidade.
 # - destinations: só os namespaces do lab. "argocd" entra porque a root app cria
 #   objetos Application ali. Ao publicar a rota do Passbolt, acrescente "application".
 # - clusterResourceWhitelist "*": o chart do Envoy Gateway cria CRDs, ClusterRoles e
@@ -15,6 +15,10 @@ spec:
   sourceRepos:
     - https://github.com/wfsiqueira/platform-lab.git
     - docker.io/envoyproxy
+    # Etapa 2 (observabilidade)
+    - https://prometheus-community.github.io/helm-charts
+    - https://grafana.github.io/helm-charts
+    - https://open-telemetry.github.io/opentelemetry-helm-charts
   destinations:
     - { server: https://kubernetes.default.svc, namespace: argocd }
     - { server: https://kubernetes.default.svc, namespace: envoy-gateway-system }
