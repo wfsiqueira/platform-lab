@@ -11,14 +11,21 @@
 # Argo CD precisa de server.insecure=true. Ativar isso QUEBRA o caminho do nginx,
 # portanto a troca do parâmetro e a do túnel são feitas juntas (runbook de migração).
 #
-# apiVersion: gateway.networking.k8s.io/v1
-# kind: HTTPRoute
-# metadata: { name: argocd, namespace: argocd }
-# spec:
-#   parentRefs: [{ name: homelab, namespace: gateway, sectionName: http }]
-#   hostnames: ["argocd.wsiqueira.cloud"]
-#   rules:
-#     - backendRefs: [{ name: argocd-server, port: 80 }]
+# A rota já existe, mas fica inerte até o dia do corte: o túnel ainda aponta para o nginx.
+# Corte (juntos): server.insecure=true no Helm do Argo CD + rota do túnel para o Envoy.
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: argocd
+  namespace: argocd
+  annotations:
+    external-dns.alpha.kubernetes.io/cloudflare-proxied: "true"
+spec:
+  parentRefs: [{ name: homelab, namespace: gateway, sectionName: http }]
+  hostnames: ["argocd.wsiqueira.cloud"]
+  rules:
+    - backendRefs: [{ name: argocd-server, port: 80 }]
 #
 # --- passbolt.wsiqueira.cloud (OPCIONAL) ------------------------------------
 # Hoje o túnel vai DIRETO em https://passbolt.application:443, sem nginx. Migrar é opcional.

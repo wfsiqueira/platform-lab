@@ -299,7 +299,7 @@ kubectl -n argocd get applications
 
 **Validação:** `platform-lab-root`, `guardrails`, `envoy-gateway` com `Synced/Healthy`; PriorityClasses `homelab-critical` e `lab-default` criadas.
 
-Em seguida, com os CRDs da Gateway API já instalados:
+Em seguida, com os CRDs da Gateway API já instalados, o external-dns precisa ler `HTTPRoute`. Em 20/11/2026 isso foi aplicado direto nos recursos (ClusterRole com `gateways`, `httproutes` e `namespaces`; argumento `--source=gateway-httproute` no Deployment). **O release Helm ainda não sabe disso**: um `helm upgrade` sem `--set` reverte a mudança. Para tornar permanente:
 
 ```bash
 helm upgrade external-dns <repo>/external-dns --version 1.17.0 -n cloudflare --reuse-values \
@@ -383,6 +383,7 @@ Pendente para a etapa 2: baseplus e Keycloak (HTTPRoutes no repositório da base
 | `kubeadm upgrade apply` falhou: "static Pod hash … did not change" | Arquivos `*.yaml.bak` de maio/2025 dentro de `/etc/kubernetes/manifests/`; o kubelet sobe tudo que está na pasta, e havia dois kube-apiserver (e dois controller-manager/scheduler, que explicavam 22 restarts) | Movi os `.bak` para `/root`, o control plane estabilizou e o `apply` passou | Static pods, leitura de logs do kubelet, rollback do kubeadm (que voltou o apiserver mas não o etcd) |
 | Apps do lab em `Unknown` com `InvalidSpecError`: "namespace '' do not match any of the allowed destinations in project 'platform-lab'" | `destination` sem `namespace`; o projeto `default` aceita, um AppProject com lista de namespaces não | `destination.namespace` explícito em cada Application | AppProject (sourceRepos, destinations, clusterResourceWhitelist), isolamento entre times no Argo CD |
 | Teste de XFP: enviado `X-Forwarded-Proto: https`, o echo recebeu `http` | Sem hops confiáveis, o Envoy trata a requisição como de borda e reescreve o header | `ClientTrafficPolicy` com `clientIPDetection.xForwardedFor.numTrustedHops: 1` (o cloudflared) em `platform/gateway/02-client-traffic-policy.yaml` | Headers de proxy (XFF/XFP), confiança entre saltos, policies de extensão da Gateway API |
+| `demo.wsiqueira.cloud` com erro no navegador; `dns.google/resolve` devolve só o CNAME `*.cfargotunnel.com` (TTL 300), sem IPs | Registro criado pelo external-dns sem proxy: a annotation `cloudflare-proxied` do Gateway não vale para rotas | Mesma annotation na `HTTPRoute` (`platform/demo/echo.yaml`) | Como o external-dns resolve annotations em fontes Gateway API; checar DNS com resolvedor público |
 | Drain do nó com o Postgres primário estourou o tempo | O PDB permitia, mas o shutdown "smart" do CloudNativePG leva minutos | Switchover do primário antes do drain e `DRAIN_TIMEOUT=600s` | `terminationGracePeriodSeconds` também segura drain; operação de bancos em Kubernetes |
 | Velero "Completed" mas sem dados | Sem file system backup (Pod Volume Backups: none) e MinIO dentro do próprio cluster | Dump do Passbolt + Secrets (GPG/JWT) no Mac; snapshots das VMs | Backup que não foi testado não é backup |
 | Componentes vencidos (Istio 1.21, Calico 3.28, ingress-nginx) | Cluster sem ciclo de upgrade | Matriz de compatibilidade antes de cada salto | Gestão de dependências e upgrade seguro |
