@@ -8,12 +8,18 @@ import uuid
 import redis
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import JSONResponse
+from opentelemetry import context as otel_context
 from opentelemetry.propagate import inject
 
 from common import jlog
 
 FAIL_RATE = float(os.getenv("FAIL_RATE", "0.02"))
 SLOW_RATE = float(os.getenv("SLOW_RATE", "0.03"))
+# O agente de auto-instrumentação deixa um span raiz ("python -m uvicorn") no contexto do processo, e todas as
+# requisições sem traceparent viravam filhas dele: um único trace gigante (>5 MB, descartado pelo Tempo).
+# Zerar o contexto herdado faz cada requisição abrir o seu próprio trace.
+otel_context.attach(otel_context.Context())
+
 r = redis.Redis(host=os.getenv("REDIS_HOST", "redis"), port=6379)
 app = FastAPI()
 
