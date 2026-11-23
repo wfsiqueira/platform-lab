@@ -138,9 +138,7 @@ Defesa em duas camadas: o Access barra quem não é você; o login do Grafana (s
 
 ## Pendências para fechar a Etapa 2
 
-1. Conferir o dashboard e a correlação na interface (log→trace, trace→logs, exemplar, service map).
-2. DNS local devolvendo 192.168.3.164 para `grafana.wsiqueira.cloud` (corrigir na UniFi).
-3. Feitos em 23/11/2026: GIF do alerta ao trace e ao log (`alerta-trace-log.gif`), orçamento de erro sem NaN, alertas `TempoDown` e `SpanMetricsAbsent`, receiver Telegram no Alertmanager (Passo 8).
+Todas resolvidas em 23/11/2026: dashboard e correlação conferidos na interface (log→trace, trace→logs, exemplar, service map), GIF do alerta ao trace e ao log (`alerta-trace-log.gif`), orçamento de erro sem NaN, alertas `TempoDown` e `SpanMetricsAbsent`, receiver Telegram (Passo 8), token do bot revisado, DNS local do Grafana na UniFi e limpeza do `/etc/hosts` e da pasta antiga `platform-lab`.
 
 ## Passo 7 — `demo.wsiqueira.cloud` atrás do Access (feito em 20/11/2026)
 
