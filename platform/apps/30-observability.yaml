@@ -68,7 +68,26 @@ spec:
                   accessModes: [ReadWriteOnce]
                   resources: { requests: { storage: 10Gi } }
         alertmanager:
+          config:
+            global: { resolve_timeout: 5m }
+            route:
+              receiver: telegram
+              group_by: [alertname, namespace]
+              group_wait: 30s
+              group_interval: 5m
+              repeat_interval: 12h
+              routes:
+                - receiver: "null"
+                  matchers: [alertname =~ "Watchdog|InfoInhibitor"]
+            receivers:
+              - name: "null"
+              - name: telegram
+                telegram_configs:
+                  - bot_token_file: /etc/alertmanager/secrets/alertmanager-telegram/token
+                    chat_id: 7975422995
+                    send_resolved: true
           alertmanagerSpec:
+            secrets: [alertmanager-telegram]  # Secret criado à mão (não está no git)
             priorityClassName: lab-default
             resources:
               requests: { cpu: 10m, memory: 48Mi }
