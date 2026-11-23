@@ -3,6 +3,11 @@
 apiVersion: v1
 kind: ConfigMap
 metadata:
+  name: dashboard-slo-demo-pipeline
+  namespace: lab-observability
+  labels:
+    grafana_dashboard: "1"
+data:
   slo-demo-pipeline.json: |
     {
       "uid": "slo-demo-pipeline",
