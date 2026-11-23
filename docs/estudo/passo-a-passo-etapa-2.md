@@ -139,10 +139,31 @@ Defesa em duas camadas: o Access barra quem não é você; o login do Grafana (s
 ## Pendências para fechar a Etapa 2
 
 1. Conferir o dashboard e a correlação na interface (log→trace, trace→logs, exemplar, service map).
-2. Gravar o GIF do alerta ao trace e ao log (entregável).
-3. Alertmanager sem receivers; DNS local devolvendo 192.168.3.164 para `grafana.wsiqueira.cloud` (corrigir na UniFi).
+2. DNS local devolvendo 192.168.3.164 para `grafana.wsiqueira.cloud` (corrigir na UniFi).
+3. Feitos em 23/11/2026: GIF do alerta ao trace e ao log (`alerta-trace-log.gif`), orçamento de erro sem NaN, alertas `TempoDown` e `SpanMetricsAbsent`, receiver Telegram no Alertmanager (Passo 8).
 
 ## Passo 7 — `demo.wsiqueira.cloud` atrás do Access (feito em 20/11/2026)
 
 - Aplicação `demo` criada no Cloudflare Access (Zero Trust → Access controls → Applications), com a política reutilizável "Somente Willian", igual à do Grafana e do Argo CD.
 - Verificação pela borda, sem o DNS local: `curl --resolve demo.wsiqueira.cloud:443:<IP do Cloudflare> https://demo.wsiqueira.cloud/` devolve 302 para `wsiqueira-cloud.cloudflareaccess.com`. Os três hosts (demo, grafana, argocd) respondem igual.
+
+## Passo 8 — Alertmanager com receiver Telegram (feito em 23/11/2026)
+
+- O Alertmanager só tinha o receiver `null`: alertas disparavam e ninguém via. Agora a rota padrão envia ao Telegram (`send_resolved: true`, repetição a cada 12 h); `Watchdog` e `InfoInhibitor` seguem para o `null`.
+- O token do bot **não está no git**. Criar uma vez, antes do sync:
+  1. No Telegram, `@BotFather` → `/newbot`; guardar o token.
+  2. Mandar `/start` ao bot e abrir `https://api.telegram.org/bot<TOKEN>/getUpdates`; o `chat_id` é `message.chat.id` (não é segredo e fica em `30-observability.yaml`). Resultado vazio = o bot ainda não recebeu mensagem.
+  3. `kubectl -n lab-observability create secret generic alertmanager-telegram --from-literal=token='<TOKEN>'`
+- O Secret é montado por `alertmanagerSpec.secrets` e lido por `bot_token_file`. Sem o Secret o pod do Alertmanager não sobe.
+- Teste: `POST /api/v2/alerts` na porta 9093 do Alertmanager (port-forward) com um alerta de teste; a mensagem chegou ao Telegram.
+- Armadilha: `alertmanager.config` do chart passa por `tpl` do Helm; templates do Alertmanager (`{{ range .Alerts }}`) quebram o render. Usar a mensagem padrão ou escapar as chaves.
+
+### Lições deste passo
+
+| Problema | Causa | Correção |
+|---|---|---|
+| "Orçamento de erro restante" sem texto | `slo:period_error_budget_remaining` era `NaN`: 0/0 nos 5 min sem tráfego entrava na soma de 30 d e envenenava a janela | `clamp_min` no total e `or vector(0)` no erro; painel calcula direto das span metrics enquanto o histórico com NaN não sai da janela |
+| `KubeJobFailed` fixo | Dois Jobs do Kyverno falhos há 263 dias | Apagados (os CronJobs seguem criando Jobs novos) |
+| Telemetria caiu sem aviso | Nenhum alerta sobre Tempo/span metrics | `TempoDown` e `SpanMetricsAbsent` (só no horário do loadgen) |
+| App `slos` preso em retry após commit quebrado | Script que reescreveu o ConfigMap do dashboard cortou o cabeçalho; o Argo reaplicava a operação antiga | Cabeçalho restaurado; `operation: null` e novo sync |
+

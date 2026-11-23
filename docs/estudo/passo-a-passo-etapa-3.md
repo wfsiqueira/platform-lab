@@ -57,5 +57,5 @@ A dependência mais importante: o gatilho da api só funciona enquanto a telemet
 ## Pendências
 
 1. Conferir o dashboard "Autoscaling KEDA do demo-pipeline" na interface (os painéis foram validados só por consulta direta ao Prometheus).
-2. Alerta para "métrica de span ausente" (o Tempo caiu por mais de 30 minutos sem que nenhum alerta avisasse).
+2. ~~Alerta de span metrics ausente~~: feito em 23/11 (`TempoDown`, `SpanMetricsAbsent`) com receiver Telegram (ver Passo 8 da Etapa 2).
 3. Escala por cron do loadgen: fora das 8h às 22h os SLOs da Etapa 2 ficam sem dados.
