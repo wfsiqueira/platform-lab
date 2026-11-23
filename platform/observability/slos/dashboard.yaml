@@ -3,11 +3,6 @@
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: dashboard-slo-demo-pipeline
-  namespace: lab-observability
-  labels:
-    grafana_dashboard: "1"
-data:
   slo-demo-pipeline.json: |
     {
       "uid": "slo-demo-pipeline",
@@ -28,7 +23,7 @@ data:
         {
           "id": 1,
           "type": "stat",
-          "title": "Orçamento de erro restante (30d)",
+          "title": "Orçamento de erro restante (janela de até 30d)",
           "datasource": {
             "type": "prometheus",
             "uid": "prometheus"
@@ -46,8 +41,17 @@ data:
                 "type": "prometheus",
                 "uid": "prometheus"
               },
-              "expr": "slo:period_error_budget_remaining:ratio{sloth_service=\"demo-pipeline\"}",
-              "legendFormat": "{{sloth_slo}}"
+              "expr": "1 - (sum(increase(traces_spanmetrics_calls_total{service=\"api\",span_name=\"POST /order\",status_code=\"STATUS_CODE_ERROR\"}[30d])) / sum(increase(traces_spanmetrics_calls_total{service=\"api\",span_name=\"POST /order\"}[30d]))) / 0.01",
+              "legendFormat": "api-availability"
+            },
+            {
+              "refId": "B",
+              "datasource": {
+                "type": "prometheus",
+                "uid": "prometheus"
+              },
+              "expr": "1 - ((sum(increase(traces_spanmetrics_latency_count{service=\"worker\",span_name=\"process_order\"}[30d])) - sum(increase(traces_spanmetrics_latency_bucket{service=\"worker\",span_name=\"process_order\",le=\"1.024\"}[30d]))) / sum(increase(traces_spanmetrics_latency_count{service=\"worker\",span_name=\"process_order\"}[30d]))) / 0.1",
+              "legendFormat": "worker-latency"
             }
           ],
           "fieldConfig": {
@@ -69,14 +73,21 @@ data:
                     "value": 0.5
                   }
                 ]
-              }
+              },
+              "noValue": "sem dados"
             },
             "overrides": []
           },
           "options": {
-            "colorMode": "background",
+            "colorMode": "value",
             "graphMode": "none",
-            "textMode": "value_and_name"
+            "textMode": "value_and_name",
+            "reduceOptions": {
+              "calcs": [
+                "lastNotNull"
+              ],
+              "values": false
+            }
           }
         },
         {

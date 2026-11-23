@@ -1,0 +1,24 @@
+# Alertas da própria cadeia de telemetria. O KEDA da api e os SLOs dependem das span metrics:
+# se o Tempo ou o gateway do OTel caírem, ambos ficam cegos sem nenhum aviso.
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: telemetry-pipeline
+  namespace: lab-observability
+spec:
+  groups:
+    - name: telemetry-pipeline
+      rules:
+        - alert: TempoDown
+          expr: absent(up{job="tempo", namespace="lab-observability"} == 1)
+          for: 5m
+          labels: { severity: warning }
+          annotations:
+            summary: O Tempo não está respondendo; traces e span metrics (SLOs, KEDA da api) pararam.
+        - alert: SpanMetricsAbsent
+          # Só avalia no horário do loadgen (08h às 22h em Brasília = 11h às 01h UTC); fora dele não há tráfego.
+          expr: absent(traces_spanmetrics_calls_total{service="api"}) and on() ((hour() >= 11) or (hour() < 1))
+          for: 20m
+          labels: { severity: warning }
+          annotations:
+            summary: Sem span metrics da api; confira o gateway do OTel e o metrics-generator do Tempo.
