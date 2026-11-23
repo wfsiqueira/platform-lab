@@ -13,7 +13,7 @@ spec:
       containers:
         - name: loadgen
           image: curlimages/curl:8.11.1
-          command: ["sh", "-c", "while true; do curl -s -o /dev/null -X POST http://api:8000/order; sleep 0.5; done"]
+          command: ["sh", "-c", "while true; do curl -s -m 5 -o /dev/null -X POST http://api:8000/order; sleep 0.5; done"]
           resources:
             requests: { cpu: 10m, memory: 16Mi }
             limits: { memory: 64Mi }
