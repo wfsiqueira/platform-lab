@@ -98,7 +98,7 @@ spec:
             size: 2Gi
           resources:
             requests: { cpu: 50m, memory: 160Mi }
-            limits: { memory: 768Mi }  # 384Mi estourava (OOMKilled) com os dashboards novos
+            limits: { memory: 1Gi }  # 384Mi estourava (OOMKilled); 768Mi chegou a ~730Mi de uso
           # Métrica -> trace: exemplars do Prometheus apontam para o Tempo.
           sidecar:
             datasources:
