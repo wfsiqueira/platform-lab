@@ -35,7 +35,7 @@ spec:
       containers:
         - name: api
           image: python:3.12-slim
-          command: ["python","-m","uvicorn","api:app","--host","0.0.0.0","--port","8000","--app-dir","/app"]
+          command: ["python","-m","uvicorn","api:app","--host","0.0.0.0","--port","8000","--app-dir","/app","--lifespan","off"]  # com lifespan ligado todas as requisições caíam em um único trace id
           env:
             - { name: OTEL_SERVICE_NAME, value: api }
             - { name: PYTHONPATH, value: /deps:/app }
