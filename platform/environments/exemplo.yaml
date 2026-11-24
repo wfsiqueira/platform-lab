@@ -1,4 +1,5 @@
-# Pedido de um ambiente completo: namespace lab-exemplo com quota, NetworkPolicy e Postgres (CloudNativePG).
+# Pedido de um ambiente completo: namespace lab-exemplo com quota, NetworkPolicy, Postgres (CloudNativePG)
+# e um Application do Argo CD que sincroniza platform/exemplo-app.
 apiVersion: platform.wsiqueira.cloud/v1alpha1
 kind: AppEnvironment
 metadata:
@@ -7,3 +8,6 @@ spec:
   tier: small
   database:
     size: small
+  gitops:
+    repoURL: https://github.com/wfsiqueira/platform-lab.git
+    path: platform/exemplo-app

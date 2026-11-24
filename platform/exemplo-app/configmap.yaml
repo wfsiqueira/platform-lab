@@ -1,0 +1,7 @@
+# Conteúdo mínimo que o Application do ambiente "exemplo" sincroniza (prova o spec.gitops do AppEnvironment).
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: exemplo-app
+data:
+  mensagem: "Entregue pelo Argo CD, criado pelo Crossplane a partir do AppEnvironment"
