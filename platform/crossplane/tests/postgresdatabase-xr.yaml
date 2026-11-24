@@ -1,0 +1,7 @@
+apiVersion: platform.wsiqueira.cloud/v1alpha1
+kind: PostgresDatabase
+metadata:
+  name: db
+  namespace: lab-exemplo
+spec:
+  size: medium

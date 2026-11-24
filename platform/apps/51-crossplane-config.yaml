@@ -1,0 +1,25 @@
+# Etapa 4: a API de plataforma (Functions, RBAC, XRDs e Compositions). Dentro da app, sync-waves ordenam:
+# 0 Functions e RBAC, 1 XRDs, 2 Compositions. Os testes de `crossplane render` ficam em tests/ (excluídos aqui).
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: crossplane-config
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "51"
+spec:
+  project: platform-lab
+  source:
+    repoURL: https://github.com/wfsiqueira/platform-lab.git
+    targetRevision: main
+    path: platform/crossplane
+    directory:
+      recurse: true
+      exclude: "tests/*"
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: lab-crossplane
+  syncPolicy:
+    automated: { prune: true, selfHeal: true }
+    syncOptions: [SkipDryRunOnMissingResource=true]
+    retry: { limit: 5, backoff: { duration: 30s, factor: 2, maxDuration: 5m } }

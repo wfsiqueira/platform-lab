@@ -1,0 +1,30 @@
+# Testa as Compositions do Crossplane renderizando-as (sem cluster) a cada mudança em platform/crossplane.
+name: crossplane-render
+on:
+  pull_request:
+    paths: ["platform/crossplane/**", ".github/workflows/crossplane-render.yml"]
+  push:
+    branches: [main]
+    paths: ["platform/crossplane/**", ".github/workflows/crossplane-render.yml"]
+permissions:
+  contents: read
+jobs:
+  render:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Instala a CLI do Crossplane
+        run: |
+          curl -sfL -o crossplane https://cli.crossplane.io/stable/v2.5.0/bin/linux_amd64/crossplane
+          chmod +x crossplane
+      - name: Renderiza PostgresDatabase e confere o tamanho
+        working-directory: platform/crossplane
+        run: |
+          ../../crossplane render tests/postgresdatabase-xr.yaml postgresdatabase/composition.yaml functions.yaml > /tmp/db.yaml
+          grep -q "instances: 2" /tmp/db.yaml
+          grep -q "kind: Cluster" /tmp/db.yaml
+      - name: Renderiza AppEnvironment e confere os 6 recursos
+        working-directory: platform/crossplane
+        run: |
+          ../../crossplane render tests/appenvironment-xr.yaml appenvironment/composition.yaml functions.yaml > /tmp/env.yaml
+          for k in Namespace ResourceQuota LimitRange NetworkPolicy PostgresDatabase Application; do grep -q "^kind: $k" /tmp/env.yaml || { echo "faltou $k"; exit 1; }; done

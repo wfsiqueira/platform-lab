@@ -1,0 +1,46 @@
+# API de alto nível para um Postgres: o time escolhe só o tamanho. O kind NÃO se chama "Database" para não
+# colidir com o `databases.postgresql.cnpg.io` do CloudNativePG (`kubectl get database` ficaria ambíguo).
+apiVersion: apiextensions.crossplane.io/v2
+kind: CompositeResourceDefinition
+metadata:
+  name: postgresdatabases.platform.wsiqueira.cloud
+  annotations:
+    argocd.argoproj.io/sync-wave: "1"
+spec:
+  scope: Namespaced
+  group: platform.wsiqueira.cloud
+  names:
+    kind: PostgresDatabase
+    plural: postgresdatabases
+    shortNames: [pgdb]
+  versions:
+    - name: v1alpha1
+      served: true
+      referenceable: true
+      schema:
+        openAPIV3Schema:
+          type: object
+          properties:
+            spec:
+              type: object
+              properties:
+                size:
+                  type: string
+                  enum: [small, medium]
+                  default: small
+                  description: small = 1 instância (1 GiB); medium = 2 instâncias com réplica (2 GiB cada).
+                databaseName:
+                  type: string
+                  default: app
+                owner:
+                  type: string
+                  default: app
+            status:
+              type: object
+              properties:
+                host:
+                  type: string
+                  description: Serviço de escrita (primário) dentro do cluster.
+                secretName:
+                  type: string
+                  description: Secret com usuário, senha e URI (criado pelo CloudNativePG).

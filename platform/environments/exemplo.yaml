@@ -1,0 +1,9 @@
+# Pedido de um ambiente completo: namespace lab-exemplo com quota, NetworkPolicy e Postgres (CloudNativePG).
+apiVersion: platform.wsiqueira.cloud/v1alpha1
+kind: AppEnvironment
+metadata:
+  name: exemplo
+spec:
+  tier: small
+  database:
+    size: small

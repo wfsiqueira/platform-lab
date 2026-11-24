@@ -22,6 +22,8 @@ spec:
     - https://slok.github.io/sloth
     # Etapa 3 (autoscaling)
     - https://kedacore.github.io/charts
+    # Etapa 4 (Crossplane)
+    - https://charts.crossplane.io/stable
   destinations:
     - { server: https://kubernetes.default.svc, namespace: argocd }
     - { server: https://kubernetes.default.svc, namespace: envoy-gateway-system }

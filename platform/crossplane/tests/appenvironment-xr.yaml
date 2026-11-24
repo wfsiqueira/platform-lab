@@ -1,0 +1,8 @@
+apiVersion: platform.wsiqueira.cloud/v1alpha1
+kind: AppEnvironment
+metadata:
+  name: exemplo
+spec:
+  tier: small
+  database: { size: small }
+  gitops: { repoURL: https://github.com/wfsiqueira/platform-lab.git, path: platform/demo-pipeline }

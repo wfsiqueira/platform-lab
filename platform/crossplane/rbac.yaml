@@ -1,0 +1,23 @@
+# O Crossplane só cria o que o ServiceAccount dele pode criar. Este ClusterRole agrega ao papel do Crossplane
+# os tipos que as Compositions desta plataforma compõem (menor privilégio: só estes tipos).
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: crossplane-platform-lab
+  labels:
+    rbac.crossplane.io/aggregate-to-crossplane: "true"
+  annotations:
+    argocd.argoproj.io/sync-wave: "0"
+rules:
+  - apiGroups: [""]
+    resources: [namespaces, resourcequotas, limitranges]
+    verbs: [get, list, watch, create, update, patch, delete]
+  - apiGroups: [networking.k8s.io]
+    resources: [networkpolicies]
+    verbs: [get, list, watch, create, update, patch, delete]
+  - apiGroups: [postgresql.cnpg.io]
+    resources: [clusters]
+    verbs: [get, list, watch, create, update, patch, delete]
+  - apiGroups: [argoproj.io]
+    resources: [applications]
+    verbs: [get, list, watch, create, update, patch, delete]

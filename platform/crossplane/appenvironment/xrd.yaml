@@ -1,0 +1,61 @@
+# Ambiente de aplicação completo: namespace com quota, limites, NetworkPolicy, banco e (opcional) Application do Argo CD.
+# O XR é cluster-scoped porque cria um Namespace (um XR namespaced só compõe recursos do próprio namespace).
+apiVersion: apiextensions.crossplane.io/v2
+kind: CompositeResourceDefinition
+metadata:
+  name: appenvironments.platform.wsiqueira.cloud
+  annotations:
+    argocd.argoproj.io/sync-wave: "1"
+spec:
+  scope: Cluster
+  group: platform.wsiqueira.cloud
+  names:
+    kind: AppEnvironment
+    plural: appenvironments
+    shortNames: [appenv]
+  versions:
+    - name: v1alpha1
+      served: true
+      referenceable: true
+      schema:
+        openAPIV3Schema:
+          type: object
+          properties:
+            spec:
+              type: object
+              properties:
+                tier:
+                  type: string
+                  enum: [small, medium]
+                  default: small
+                  description: Tamanho da quota do namespace.
+                database:
+                  type: object
+                  default: {}
+                  properties:
+                    enabled:
+                      type: boolean
+                      default: true
+                    size:
+                      type: string
+                      enum: [small, medium]
+                      default: small
+                gitops:
+                  type: object
+                  description: Se repoURL for informado, cria um Application do Argo CD (o repo precisa estar no AppProject platform-lab).
+                  properties:
+                    repoURL:
+                      type: string
+                    path:
+                      type: string
+                      default: .
+                    revision:
+                      type: string
+                      default: main
+            status:
+              type: object
+              properties:
+                namespace:
+                  type: string
+                databaseHost:
+                  type: string

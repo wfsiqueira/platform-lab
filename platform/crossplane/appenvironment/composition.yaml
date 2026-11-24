@@ -1,0 +1,140 @@
+apiVersion: apiextensions.crossplane.io/v1
+kind: Composition
+metadata:
+  name: appenvironment-padrao
+  annotations:
+    argocd.argoproj.io/sync-wave: "2"
+spec:
+  compositeTypeRef:
+    apiVersion: platform.wsiqueira.cloud/v1alpha1
+    kind: AppEnvironment
+  mode: Pipeline
+  pipeline:
+    - step: render
+      functionRef:
+        name: function-go-templating
+      input:
+        apiVersion: gotemplating.fn.crossplane.io/v1beta1
+        kind: GoTemplate
+        source: Inline
+        inline:
+          template: |
+            {{- $xr := .observed.composite.resource }}
+            {{- $name := $xr.metadata.name }}
+            {{- $ns := printf "lab-%s" $name }}
+            {{- $tier := dig "spec" "tier" "small" $xr }}
+            {{- $quotas := dict
+                  "small" (dict "cpu" "1" "mem" "1Gi" "limit" "3Gi" "pods" "15" "pvc" "4")
+                  "medium" (dict "cpu" "2" "mem" "2Gi" "limit" "6Gi" "pods" "30" "pvc" "6") }}
+            {{- $q := index $quotas $tier }}
+            {{- $dbEnabled := dig "spec" "database" "enabled" true $xr }}
+            {{- $dbSize := dig "spec" "database" "size" "small" $xr }}
+            {{- $repo := dig "spec" "gitops" "repoURL" "" $xr }}
+            ---
+            apiVersion: v1
+            kind: Namespace
+            metadata:
+              name: {{ $ns }}
+              labels:
+                platform-lab/tier: lab
+                platform-lab/app-environment: {{ $name }}
+              annotations:
+                {{ setResourceNameAnnotation "namespace" }}
+            ---
+            apiVersion: v1
+            kind: ResourceQuota
+            metadata:
+              name: lab-quota
+              namespace: {{ $ns }}
+              annotations:
+                {{ setResourceNameAnnotation "quota" }}
+            spec:
+              hard:
+                requests.cpu: {{ $q.cpu | quote }}
+                requests.memory: {{ $q.mem }}
+                limits.memory: {{ $q.limit }}
+                pods: {{ $q.pods | quote }}
+                persistentvolumeclaims: {{ $q.pvc | quote }}
+            ---
+            apiVersion: v1
+            kind: LimitRange
+            metadata:
+              name: lab-defaults
+              namespace: {{ $ns }}
+              annotations:
+                {{ setResourceNameAnnotation "limitrange" }}
+            spec:
+              limits:
+                - type: Container
+                  default:
+                    memory: 256Mi
+                  defaultRequest:
+                    cpu: 25m
+                    memory: 64Mi
+                  max:
+                    memory: 2Gi
+            ---
+            # Entrada só do próprio namespace, do Envoy Gateway, do Prometheus (lab-observability) e do operador
+            # do CloudNativePG (ele consulta a porta 8000 de cada instância; sem isso o banco nunca fica saudável).
+            apiVersion: networking.k8s.io/v1
+            kind: NetworkPolicy
+            metadata:
+              name: ingress-minimo
+              namespace: {{ $ns }}
+              annotations:
+                {{ setResourceNameAnnotation "netpol" }}
+            spec:
+              podSelector: {}
+              policyTypes: [Ingress]
+              ingress:
+                - from:
+                    - podSelector: {}
+                    - namespaceSelector:
+                        matchExpressions:
+                          - key: kubernetes.io/metadata.name
+                            operator: In
+                            values: [envoy-gateway-system, lab-observability, cnpg-system]
+            {{- if $dbEnabled }}
+            ---
+            apiVersion: platform.wsiqueira.cloud/v1alpha1
+            kind: PostgresDatabase
+            metadata:
+              name: db
+              namespace: {{ $ns }}
+              annotations:
+                {{ setResourceNameAnnotation "database" }}
+            spec:
+              size: {{ $dbSize }}
+            {{- end }}
+            {{- if $repo }}
+            ---
+            apiVersion: argoproj.io/v1alpha1
+            kind: Application
+            metadata:
+              name: {{ $name }}
+              namespace: argocd
+              annotations:
+                {{ setResourceNameAnnotation "application" }}
+            spec:
+              project: platform-lab
+              source:
+                repoURL: {{ $repo }}
+                path: {{ dig "spec" "gitops" "path" "." $xr }}
+                targetRevision: {{ dig "spec" "gitops" "revision" "main" $xr }}
+              destination:
+                server: https://kubernetes.default.svc
+                namespace: {{ $ns }}
+              syncPolicy:
+                automated: { prune: true, selfHeal: true }
+            {{- end }}
+            ---
+            apiVersion: platform.wsiqueira.cloud/v1alpha1
+            kind: AppEnvironment
+            status:
+              namespace: {{ $ns }}
+              {{- if $dbEnabled }}
+              databaseHost: db-rw.{{ $ns }}.svc
+              {{- end }}
+    - step: auto-ready
+      functionRef:
+        name: function-auto-ready

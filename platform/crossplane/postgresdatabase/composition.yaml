@@ -1,0 +1,62 @@
+apiVersion: apiextensions.crossplane.io/v1
+kind: Composition
+metadata:
+  name: postgresdatabase-cnpg
+  annotations:
+    argocd.argoproj.io/sync-wave: "2"
+spec:
+  compositeTypeRef:
+    apiVersion: platform.wsiqueira.cloud/v1alpha1
+    kind: PostgresDatabase
+  mode: Pipeline
+  pipeline:
+    - step: render
+      functionRef:
+        name: function-go-templating
+      input:
+        apiVersion: gotemplating.fn.crossplane.io/v1beta1
+        kind: GoTemplate
+        source: Inline
+        inline:
+          template: |
+            {{- $xr := .observed.composite.resource }}
+            {{- $name := $xr.metadata.name }}
+            {{- $ns := $xr.metadata.namespace }}
+            {{- $size := dig "spec" "size" "small" $xr }}
+            {{- $db := dig "spec" "databaseName" "app" $xr }}
+            {{- $owner := dig "spec" "owner" "app" $xr }}
+            {{- $sizes := dict
+                  "small" (dict "instances" 1 "cpu" "50m" "mem" "256Mi" "limit" "512Mi" "storage" "1Gi")
+                  "medium" (dict "instances" 2 "cpu" "100m" "mem" "512Mi" "limit" "1Gi" "storage" "2Gi") }}
+            {{- $p := index $sizes $size }}
+            {{- $phase := dig "observed" "resources" "cluster" "resource" "status" "phase" "" . }}
+            ---
+            apiVersion: postgresql.cnpg.io/v1
+            kind: Cluster
+            metadata:
+              name: {{ $name }}
+              namespace: {{ $ns }}
+              annotations:
+                {{ setResourceNameAnnotation "cluster" }}
+                gotemplating.fn.crossplane.io/ready: {{ if eq $phase "Cluster in healthy state" }}"True"{{ else }}"False"{{ end }}
+            spec:
+              instances: {{ $p.instances }}
+              storage:
+                size: {{ $p.storage }}
+                storageClass: openebs-hostpath
+              resources:
+                requests:
+                  cpu: {{ $p.cpu }}
+                  memory: {{ $p.mem }}
+                limits:
+                  memory: {{ $p.limit }}
+              bootstrap:
+                initdb:
+                  database: {{ $db }}
+                  owner: {{ $owner }}
+            ---
+            apiVersion: platform.wsiqueira.cloud/v1alpha1
+            kind: PostgresDatabase
+            status:
+              host: {{ $name }}-rw.{{ $ns }}.svc
+              secretName: {{ $name }}-app

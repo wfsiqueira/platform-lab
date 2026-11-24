@@ -1,0 +1,22 @@
+# Etapa 4: ambientes pedidos à plataforma (um YAML de poucas linhas por ambiente).
+# Atenção: com prune ligado, apagar o arquivo do ambiente apaga o namespace e o banco dele.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: environments
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "52"
+spec:
+  project: platform-lab
+  source:
+    repoURL: https://github.com/wfsiqueira/platform-lab.git
+    targetRevision: main
+    path: platform/environments
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: lab-crossplane
+  syncPolicy:
+    automated: { prune: true, selfHeal: true }
+    syncOptions: [SkipDryRunOnMissingResource=true]
+    retry: { limit: 5, backoff: { duration: 30s, factor: 2, maxDuration: 5m } }
