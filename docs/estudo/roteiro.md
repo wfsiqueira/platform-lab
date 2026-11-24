@@ -103,13 +103,13 @@ O objetivo é mostrar escala por demanda real (fila, métrica de negócio), não
 
 Aqui você transforma sua experiência de 50 módulos Terraform no PagBank em uma API de plataforma. Essa é a história mais forte do portfólio.
 
-- [ ] Instalar Crossplane e os providers `provider-kubernetes` e `provider-helm` (rodam 100% local). Opcional: `provider-aws` com credencial restrita.
-- [ ] Instalar o CloudNativePG.
-- [ ] Criar uma XRD `Database` (tamanho: small, medium) e uma Composition que gera um Cluster do CloudNativePG, um Secret de conexão e uma política de backup no MinIO.
-- [ ] Criar uma XRD `AppEnvironment` que compõe namespace, ResourceQuota, NetworkPolicy, `Database` e Application do ArgoCD.
-- [ ] Usar Composition Functions (`function-patch-and-transform` ou `function-go-templating`) em vez de patches legados.
-- [ ] Escrever testes das Compositions com `crossplane render` no CI (GitHub Actions).
-- [ ] ADR-004: "Crossplane × Terraform + Atlantis: quando usar cada um". Use sua vivência no PagBank como base.
+- [x] Instalar Crossplane e os providers `provider-kubernetes` e `provider-helm` (rodam 100% local). Opcional: `provider-aws` com credencial restrita.
+- [x] Instalar o CloudNativePG.
+- [x] Criar uma XRD `Database` (tamanho: small, medium) e uma Composition que gera um Cluster do CloudNativePG, um Secret de conexão e uma política de backup no MinIO.
+- [x] Criar uma XRD `AppEnvironment` que compõe namespace, ResourceQuota, NetworkPolicy, `Database` e Application do ArgoCD.
+- [x] Usar Composition Functions (`function-patch-and-transform` ou `function-go-templating`) em vez de patches legados.
+- [x] Escrever testes das Compositions com `crossplane render` no CI (GitHub Actions).
+- [x] ADR-004: "Crossplane × Terraform + Atlantis: quando usar cada um". Use sua vivência no PagBank como base.
 
 **Entregável:** um YAML de 10 linhas que um time aplica e recebe ambiente completo com banco, documentado com antes e depois.
 

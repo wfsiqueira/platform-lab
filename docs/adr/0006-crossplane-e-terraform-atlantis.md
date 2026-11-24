@@ -38,4 +38,5 @@ Regra prática: Terraform cria o chão (inclusive o cluster onde o Crossplane ro
 - O Crossplane vira dependência de runtime (core, rbac-manager e dois pods de função, ~230 MiB no total medido) e o RBAC dele precisa listar os tipos que as Compositions criam (`platform/crossplane/rbac.yaml`).
 - Apagar o arquivo do ambiente com `prune` ligado apaga namespace e banco. No lab é desejado; em produção exigiria `deletionPolicy` e backup.
 - O CloudNativePG e o cert-manager já existiam no cluster fora do GitOps; a Etapa 4 usa o CNPG como está e deixa a adoção pelo Argo CD como pendência.
-- Backup do banco no Garage (política do roteiro) fica fora desta etapa: exige o plugin Barman Cloud (o suporte nativo sai no CNPG 1.31).
+- O backup usa o plugin Barman Cloud (o suporte nativo do CNPG sai na 1.31) e o Garage. A chave do bucket é compartilhada entre os bancos do lab e copiada para cada namespace pelo Crossplane; em produção seria uma chave por banco ou identidade de carga de trabalho.
+- O plugin roda em `cnpg-system`, compartilhado com outro projeto; o AppProject ganhou esse destino. O `delete` de Secrets entrou no ClusterRole agregado do Crossplane (ele já lia e gravava Secrets em todo o cluster).
