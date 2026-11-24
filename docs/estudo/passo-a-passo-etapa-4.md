@@ -29,6 +29,11 @@ spec:
 
 Resultado medido: em cerca de 90 s existiam o namespace `lab-exemplo` com quota, LimitRange e NetworkPolicy, e o `Cluster` do CloudNativePG `db` em "Cluster in healthy state" (1 instância), com o Secret `db-app` (usuário, senha e URI) e o serviço `db-rw.lab-exemplo.svc`. O `AppEnvironment` ficou `READY=True` depois da correção da readiness (veja as lições).
 
+Verificações feitas em 24/11/2026:
+- **Conexão**: um pod no namespace `lab-exemplo` conectou com a `uri` do Secret `db-app` (PostgreSQL 18.6, usuário e banco `app`).
+- **NetworkPolicy**: um pod em `lab-keda` não alcança `db-rw.lab-exemplo.svc` (`pg_isready` sem resposta); o do próprio namespace alcança. O CNI aplica a política.
+- **GitOps pelo pedido**: com `spec.gitops`, o Crossplane criou o Application `exemplo` no Argo CD, que sincronizou `platform/exemplo-app` (ConfigMap `exemplo-app`) para `lab-exemplo`; tudo Synced e Healthy.
+
 ## Como repetir e demonstrar
 
 ```bash
@@ -64,5 +69,4 @@ crossplane render tests/appenvironment-xr.yaml appenvironment/composition.yaml f
 
 1. **Backup do banco** no Garage (item do roteiro): exige o plugin Barman Cloud; o suporte nativo do CloudNativePG sai na 1.31.
 2. **CloudNativePG e cert-manager** foram instalados antes do lab, fora do GitOps; adotar com Argo CD (e decidir o dono do `baseplus-pg`).
-3. **Teste do Application opcional** (`spec.gitops`): renderiza no CI, mas não foi aplicado no cluster.
-4. **Bônus Karpenter** (EKS temporário pelo Crossplane): só com `provider-aws`, credencial restrita e alerta de orçamento.
+3. **Bônus Karpenter** (EKS temporário pelo Crossplane): só com `provider-aws`, credencial restrita e alerta de orçamento.
