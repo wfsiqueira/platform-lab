@@ -48,6 +48,7 @@ spec:
               namespace: {{ $ns }}
               annotations:
                 {{ setResourceNameAnnotation "quota" }}
+                gotemplating.fn.crossplane.io/ready: "True"
             spec:
               hard:
                 requests.cpu: {{ $q.cpu | quote }}
@@ -63,6 +64,7 @@ spec:
               namespace: {{ $ns }}
               annotations:
                 {{ setResourceNameAnnotation "limitrange" }}
+                gotemplating.fn.crossplane.io/ready: "True"
             spec:
               limits:
                 - type: Container
@@ -83,6 +85,7 @@ spec:
               namespace: {{ $ns }}
               annotations:
                 {{ setResourceNameAnnotation "netpol" }}
+                gotemplating.fn.crossplane.io/ready: "True"
             spec:
               podSelector: {}
               policyTypes: [Ingress]
@@ -115,6 +118,7 @@ spec:
               namespace: argocd
               annotations:
                 {{ setResourceNameAnnotation "application" }}
+                gotemplating.fn.crossplane.io/ready: "True"
             spec:
               project: platform-lab
               source:
