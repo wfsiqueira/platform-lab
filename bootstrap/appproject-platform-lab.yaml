@@ -32,5 +32,7 @@ spec:
     # Etapa 3: o chart do KEDA cria um RoleBinding em kube-system (leitor de extension-apiserver-authentication),
     # exigido pelo metrics apiserver. Aceitamos o destino; o risco é uma app do projeto escrever em kube-system.
     - { server: https://kubernetes.default.svc, namespace: kube-system }
+    # Etapa 4: o plugin Barman Cloud roda em cnpg-system (namespace do operador do CloudNativePG, compartilhado com o baseplus).
+    - { server: https://kubernetes.default.svc, namespace: cnpg-system }
   clusterResourceWhitelist:
     - { group: "*", kind: "*" }

@@ -1,0 +1,23 @@
+# Etapa 4: plugin Barman Cloud (backup e WAL archive do CloudNativePG para S3). Roda em cnpg-system, o namespace do
+# operador que o baseplus-pg também usa: a mudança é aditiva (CRD ObjectStore + um Deployment), mas o destino
+# cnpg-system foi liberado no AppProject por causa dela. O CRD é grande: ServerSideApply.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: cnpg-barman-plugin
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "49"
+spec:
+  project: platform-lab
+  source:
+    repoURL: https://github.com/wfsiqueira/platform-lab.git
+    targetRevision: main
+    path: platform/cnpg-plugin
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: cnpg-system
+  syncPolicy:
+    automated: { prune: true, selfHeal: true }
+    syncOptions: [ServerSideApply=true]
+    retry: { limit: 5, backoff: { duration: 30s, factor: 2, maxDuration: 5m } }
