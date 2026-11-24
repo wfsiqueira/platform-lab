@@ -35,6 +35,17 @@ spec:
                 owner:
                   type: string
                   default: app
+                backup:
+                  type: object
+                  default: {}
+                  description: Backup diário (03h) e arquivamento de WAL no Garage, via plugin Barman Cloud.
+                  properties:
+                    enabled:
+                      type: boolean
+                      default: true
+                    retention:
+                      type: string
+                      default: 7d
             status:
               type: object
               properties:
@@ -44,3 +55,6 @@ spec:
                 secretName:
                   type: string
                   description: Secret com usuário, senha e URI (criado pelo CloudNativePG).
+                backupPath:
+                  type: string
+                  description: Destino S3 dos backups (vazio se backup desligado).

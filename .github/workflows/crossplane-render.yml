@@ -20,9 +20,10 @@ jobs:
       - name: Renderiza PostgresDatabase e confere o tamanho
         working-directory: platform/crossplane
         run: |
-          ../../crossplane render tests/postgresdatabase-xr.yaml postgresdatabase/composition.yaml functions.yaml > /tmp/db.yaml
+          ../../crossplane render tests/postgresdatabase-xr.yaml postgresdatabase/composition.yaml functions.yaml \
+            --extra-resources=tests/extra-resources.yaml > /tmp/db.yaml
           grep -q "instances: 2" /tmp/db.yaml
-          grep -q "kind: Cluster" /tmp/db.yaml
+          for k in Cluster ObjectStore ScheduledBackup Secret; do grep -q "^kind: $k" /tmp/db.yaml || { echo "faltou $k"; exit 1; }; done
       - name: Renderiza AppEnvironment e confere os 6 recursos
         working-directory: platform/crossplane
         run: |

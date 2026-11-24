@@ -1,0 +1,9 @@
+# Secret falso só para o crossplane render (a chave real vem do Secret garage-cnpg-backups em lab-crossplane).
+apiVersion: v1
+kind: Secret
+metadata:
+  name: garage-cnpg-backups
+  namespace: lab-crossplane
+data:
+  ACCESS_KEY_ID: ZmFrZS1pZA==
+  ACCESS_SECRET_KEY: ZmFrZS1zZWNyZXQ=

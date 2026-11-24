@@ -16,8 +16,16 @@ rules:
     resources: [networkpolicies]
     verbs: [get, list, watch, create, update, patch, delete]
   - apiGroups: [postgresql.cnpg.io]
-    resources: [clusters]
+    resources: [clusters, scheduledbackups]
     verbs: [get, list, watch, create, update, patch, delete]
+  - apiGroups: [barmancloud.cnpg.io]
+    resources: [objectstores]
+    verbs: [get, list, watch, create, update, patch, delete]
+  # O ClusterRole padrão do Crossplane já lê e grava Secrets; falta apagar a cópia da chave de backup
+  # quando o banco sai (a Composition cria um Secret por banco).
+  - apiGroups: [""]
+    resources: [secrets]
+    verbs: [delete]
   - apiGroups: [argoproj.io]
     resources: [applications]
     verbs: [get, list, watch, create, update, patch, delete]

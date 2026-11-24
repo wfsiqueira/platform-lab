@@ -10,6 +10,22 @@ spec:
     kind: PostgresDatabase
   mode: Pipeline
   pipeline:
+    # Lê a chave do Garage (Secret garage-cnpg-backups em lab-crossplane) para copiá-la ao namespace do banco.
+    - step: extra-resources
+      functionRef:
+        name: function-extra-resources
+      input:
+        apiVersion: extra-resources.fn.crossplane.io/v1beta1
+        kind: Input
+        spec:
+          extraResources:
+            - kind: Secret
+              apiVersion: v1
+              into: backupCreds
+              type: Reference
+              ref:
+                name: garage-cnpg-backups
+              namespace: lab-crossplane
     - step: render
       functionRef:
         name: function-go-templating
@@ -29,6 +45,9 @@ spec:
                   "small" (dict "instances" 1 "cpu" "50m" "mem" "256Mi" "limit" "512Mi" "storage" "1Gi")
                   "medium" (dict "instances" 2 "cpu" "100m" "mem" "512Mi" "limit" "1Gi" "storage" "2Gi") }}
             {{- $p := index $sizes $size }}
+            {{- $backup := dig "spec" "backup" "enabled" true $xr }}
+            {{- $retention := dig "spec" "backup" "retention" "7d" $xr }}
+            {{- $creds := dig "apiextensions.crossplane.io/extra-resources" "backupCreds" (list) .context }}
             {{- $phase := dig "observed" "resources" "cluster" "resource" "status" "phase" "" . }}
             ---
             apiVersion: postgresql.cnpg.io/v1
@@ -54,9 +73,77 @@ spec:
                 initdb:
                   database: {{ $db }}
                   owner: {{ $owner }}
+              {{- if and $backup $creds }}
+              plugins:
+                - name: barman-cloud.cloudnative-pg.io
+                  isWALArchiver: true
+                  parameters:
+                    barmanObjectName: {{ $name }}-backup
+              {{- end }}
+            {{- if and $backup $creds }}
+            ---
+            # Cópia da chave do Garage para o namespace do banco (o ObjectStore só lê Secret do próprio namespace).
+            apiVersion: v1
+            kind: Secret
+            metadata:
+              name: garage-backup
+              namespace: {{ $ns }}
+              annotations:
+                {{ setResourceNameAnnotation "backup-creds" }}
+                gotemplating.fn.crossplane.io/ready: "True"
+            type: Opaque
+            data:
+              ACCESS_KEY_ID: {{ (index $creds 0).data.ACCESS_KEY_ID }}
+              ACCESS_SECRET_KEY: {{ (index $creds 0).data.ACCESS_SECRET_KEY }}
+            ---
+            apiVersion: barmancloud.cnpg.io/v1
+            kind: ObjectStore
+            metadata:
+              name: {{ $name }}-backup
+              namespace: {{ $ns }}
+              annotations:
+                {{ setResourceNameAnnotation "objectstore" }}
+                gotemplating.fn.crossplane.io/ready: "True"
+            spec:
+              retentionPolicy: {{ $retention | quote }}
+              configuration:
+                destinationPath: s3://cnpg-backups/{{ $ns }}/{{ $name }}
+                endpointURL: http://garage.lab-observability.svc:3900
+                s3Credentials:
+                  accessKeyId: { name: garage-backup, key: ACCESS_KEY_ID }
+                  secretAccessKey: { name: garage-backup, key: ACCESS_SECRET_KEY }
+                wal: { compression: gzip }
+                data: { compression: gzip }
+              instanceSidecarConfiguration:
+                env:
+                  - { name: AWS_DEFAULT_REGION, value: garage }
+                resources:
+                  requests: { cpu: 10m, memory: 48Mi }
+                  limits: { memory: 192Mi }
+            ---
+            apiVersion: postgresql.cnpg.io/v1
+            kind: ScheduledBackup
+            metadata:
+              name: {{ $name }}-diario
+              namespace: {{ $ns }}
+              annotations:
+                {{ setResourceNameAnnotation "scheduledbackup" }}
+                gotemplating.fn.crossplane.io/ready: "True"
+            spec:
+              schedule: "0 0 3 * * *"
+              backupOwnerReference: self
+              method: plugin
+              cluster:
+                name: {{ $name }}
+              pluginConfiguration:
+                name: barman-cloud.cloudnative-pg.io
+            {{- end }}
             ---
             apiVersion: platform.wsiqueira.cloud/v1alpha1
             kind: PostgresDatabase
             status:
               host: {{ $name }}-rw.{{ $ns }}.svc
               secretName: {{ $name }}-app
+              {{- if and $backup $creds }}
+              backupPath: s3://cnpg-backups/{{ $ns }}/{{ $name }}
+              {{- end }}
